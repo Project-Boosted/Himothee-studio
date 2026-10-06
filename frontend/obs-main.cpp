@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include <OBSApp.hpp>
+#include "ui-config.h"
 
 #include <components/VolumeAccessibleInterface.hpp>
 #ifdef __APPLE__
@@ -72,7 +73,7 @@ bool opt_start_virtualcam = false;
 bool opt_minimize_tray = false;
 bool opt_allow_opengl = false;
 bool opt_always_on_top = false;
-bool opt_disable_updater = false;
+bool opt_disable_updater = true;
 bool opt_disable_missing_files_check = false;
 string opt_starting_collection;
 string opt_starting_profile;
@@ -714,7 +715,7 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 #ifdef _WIN32
 
 #define CRASH_MESSAGE                                                      \
-	"Woops, OBS has crashed!\n\nWould you like to copy the crash log " \
+	"Himothee Studio has crashed!\n\nWould you like to copy the crash log " \
 	"to the clipboard? The crash log will still be saved to:\n\n%s"
 
 static void main_crash_handler(const char *format, va_list args, void * /* param */)
@@ -761,7 +762,7 @@ static void main_crash_handler(const char *format, va_list args, void * /* param
 
 	string finalMessage = string(message_buffer.get(), message_buffer.get() + size);
 
-	int ret = MessageBoxA(NULL, finalMessage.c_str(), "OBS has crashed!", MB_YESNO | MB_ICONERROR | MB_TASKMODAL);
+	int ret = MessageBoxA(NULL, finalMessage.c_str(), "Himothee Studio has crashed!", MB_YESNO | MB_ICONERROR | MB_TASKMODAL);
 
 	if (ret == IDYES) {
 		size_t len = strlen(text);
@@ -820,7 +821,7 @@ static inline bool arg_is(const char *arg, const char *long_form, const char *sh
 
 #ifdef _WIN32
 static constexpr char vcRunErrorTitle[] = "Outdated Visual C++ Runtime";
-static constexpr char vcRunErrorMsg[] = "OBS Studio requires a newer version of the Microsoft Visual C++ "
+static constexpr char vcRunErrorMsg[] = "Himothee Studio requires a newer version of the Microsoft Visual C++ "
 					"Redistributables.\n\nYou will now be directed to the download page.";
 static constexpr char vcRunInstallerUrl[] = "https://obsproject.com/visual-studio-2022-runtimes";
 
@@ -1057,7 +1058,8 @@ int main(int argc, char *argv[])
 			exit(0);
 
 		} else if (arg_is(argv[i], "--version", "-V")) {
-			std::cout << "OBS Studio - " << App()->GetVersionString(false) << "\n";
+			std::cout << HIMOTHEE_PRODUCT_NAME << " " << HIMOTHEE_VERSION << " (OBS "
+				  << App()->GetVersionString(false) << ")\n";
 			exit(0);
 		}
 	}
