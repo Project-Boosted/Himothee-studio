@@ -1,0 +1,57 @@
+name: Himothee Stage 1 - Windows Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - himothee-dev
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64-baseline:
+    name: Windows x64 baseline
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout OBS 32.2.2 based source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Record baseline information
+        run: |
+          Write-Host "Himothee Studio Stage 1 baseline"
+          Write-Host "Development branch: $Env:GITHUB_REF_NAME"
+          Write-Host "Commit: $Env:GITHUB_SHA"
+          git --version
+          cmake --version
+
+      - name: Build OBS Studio 32.2.2 baseline
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Package portable Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Windows baseline
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Stage1-OBS-32.2.2-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
