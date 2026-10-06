@@ -27,6 +27,11 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+          Write-Host "Version description: $(git describe --always --tags --dirty=-modified)"
+
       - name: Record baseline information
         run: |
           Write-Host "Himothee Studio Stage 1 baseline"
