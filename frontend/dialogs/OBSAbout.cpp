@@ -1,4 +1,5 @@
 #include "OBSAbout.hpp"
+#include "ui-config.h"
 
 #include <widgets/OBSBasic.hpp>
 #include <utility/RemoteTextThread.hpp>
@@ -27,9 +28,13 @@ OBSAbout::OBSAbout(QWidget *parent) : QDialog(parent), ui(new Ui::OBSAbout)
 		bitness = " (64 bit)";
 	}
 
-	QString ver = obs_get_version_string();
-
-	ui->version->setText(ver + bitness);
+	const QString obsVersion = QString::fromUtf8(obs_get_version_string());
+	const QString himotheeVersion = QString::fromUtf8(HIMOTHEE_VERSION);
+	ui->version->setText(QStringLiteral("Version %1 (OBS %2)%3").arg(himotheeVersion, obsVersion, bitness));
+	ui->info->setText(
+		QStringLiteral("Himothee Studio is an independent streaming and production application based on "
+			       "OBS Studio. OBS Studio is developed by the OBS Project and its contributors. "
+			       "Himothee Studio is not an official OBS Project distribution."));
 
 	ui->contribute->setText(QTStr("About.Contribute"));
 
