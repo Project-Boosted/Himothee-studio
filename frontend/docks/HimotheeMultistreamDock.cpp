@@ -155,6 +155,34 @@ void HimotheeMultistreamDock::BuildUi()
 	enabledCheck = new QCheckBox(QStringLiteral("Use this destination when streaming"), editorGroup);
 	form->addRow(QString(), enabledCheck);
 
+	encoderModeCombo = new QComboBox(editorGroup);
+	encoderModeCombo->addItems({QStringLiteral("Shared Encoder"), QStringLiteral("Independent Encoder")});
+	form->addRow(QStringLiteral("Encoder mode"), encoderModeCombo);
+
+	videoBitrateSpin = new QSpinBox(editorGroup);
+	videoBitrateSpin->setRange(0, 100000);
+	videoBitrateSpin->setSpecialValueText(QStringLiteral("Match primary"));
+	videoBitrateSpin->setSuffix(QStringLiteral(" kbps"));
+	form->addRow(QStringLiteral("Video bitrate"), videoBitrateSpin);
+
+	audioBitrateSpin = new QSpinBox(editorGroup);
+	audioBitrateSpin->setRange(0, 2048);
+	audioBitrateSpin->setSpecialValueText(QStringLiteral("Match primary"));
+	audioBitrateSpin->setSuffix(QStringLiteral(" kbps"));
+	form->addRow(QStringLiteral("Audio bitrate"), audioBitrateSpin);
+
+	outputWidthSpin = new QSpinBox(editorGroup);
+	outputWidthSpin->setRange(0, 7680);
+	outputWidthSpin->setSpecialValueText(QStringLiteral("Match primary"));
+	form->addRow(QStringLiteral("Output width"), outputWidthSpin);
+
+	outputHeightSpin = new QSpinBox(editorGroup);
+	outputHeightSpin->setRange(0, 4320);
+	outputHeightSpin->setSpecialValueText(QStringLiteral("Match primary"));
+	form->addRow(QStringLiteral("Output height"), outputHeightSpin);
+
+	connect(encoderModeCombo, &QComboBox::currentIndexChanged, this, [this]() { UpdateEncoderControls(); });
+
 	serverEdit = new QLineEdit(editorGroup);
 	serverEdit->setPlaceholderText(QStringLiteral("rtmps://server.example/app"));
 	form->addRow(QStringLiteral("Server"), serverEdit);
@@ -276,7 +304,12 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(0, QString::fromStdString(config.name));
 		item->setText(1, QString::fromStdString(config.platform));
 		item->setText(2, config.enabled ? QStringLiteral("On") : QStringLiteral("Off"));
-		item->setText(3, QStringLiteral("Shared"));
+		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
+					 ? QStringLiteral("Independent")
+					 : QStringLiteral("Shared"));
+		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
+					 ? QStringLiteral("Independent")
+					 : QStringLiteral("Shared"));
 		item->setText(4, config.enabled ? QStringLiteral("Ready") : QStringLiteral("Disabled"));
 		item->setText(5, QStringLiteral("0 kbps"));
 		item->setText(6, QStringLiteral("0"));
@@ -303,6 +336,11 @@ void HimotheeMultistreamDock::LoadEditor(int index)
 	platformCombo->setCurrentIndex(platformIndex);
 	nameEdit->setText(QString::fromStdString(config.name));
 	enabledCheck->setChecked(config.enabled);
+	encoderModeCombo->setCurrentIndex(config.encoderMode == HimotheeEncoderMode::Independent ? 1 : 0);
+	videoBitrateSpin->setValue(config.videoBitrateKbps);
+	audioBitrateSpin->setValue(config.audioBitrateKbps);
+	outputWidthSpin->setValue(static_cast<int>(config.outputWidth));
+	outputHeightSpin->setValue(static_cast<int>(config.outputHeight));
 	serverEdit->setText(QString::fromStdString(config.server));
 	keyEdit->setText(QString::fromStdString(config.key));
 	useAuthCheck->setChecked(config.useAuth);
@@ -325,6 +363,12 @@ void HimotheeMultistreamDock::StoreEditor()
 	config.platform = platformCombo->currentText().toStdString();
 	config.name = nameEdit->text().trimmed().toStdString();
 	config.enabled = enabledCheck->isChecked();
+	config.encoderMode =
+		encoderModeCombo->currentIndex() == 1 ? HimotheeEncoderMode::Independent : HimotheeEncoderMode::Shared;
+	config.videoBitrateKbps = videoBitrateSpin->value();
+	config.audioBitrateKbps = audioBitrateSpin->value();
+	config.outputWidth = static_cast<uint32_t>(outputWidthSpin->value());
+	config.outputHeight = static_cast<uint32_t>(outputHeightSpin->value());
 	config.server = serverEdit->text().trimmed().toStdString();
 	config.key = keyEdit->text().toStdString();
 	config.useAuth = useAuthCheck->isChecked();
@@ -345,6 +389,7 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	platformCombo->setEnabled(enabled);
 	nameEdit->setEnabled(enabled);
 	enabledCheck->setEnabled(enabled);
+	encoderModeCombo->setEnabled(enabled);
 	serverEdit->setEnabled(enabled);
 	keyEdit->setEnabled(enabled);
 	showSecretsCheck->setEnabled(enabled);
@@ -353,12 +398,24 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	passwordEdit->setEnabled(enabled && useAuthCheck->isChecked());
 	maxRetriesSpin->setEnabled(enabled);
 	retryDelaySpin->setEnabled(enabled);
+	UpdateEncoderControls();
 
 	const bool canEditList = enabled && !main->StreamingActive();
 	addButton->setEnabled(!main->StreamingActive());
 	removeButton->setEnabled(canEditList && currentIndex >= 0);
 	saveButton->setEnabled(!main->StreamingActive());
 	reloadButton->setEnabled(!main->StreamingActive());
+}
+
+void HimotheeMultistreamDock::UpdateEncoderControls()
+{
+	const bool editorAvailable = encoderModeCombo->isEnabled();
+	const bool independent = encoderModeCombo->currentIndex() == 1;
+
+	videoBitrateSpin->setEnabled(editorAvailable && independent);
+	audioBitrateSpin->setEnabled(editorAvailable && independent);
+	outputWidthSpin->setEnabled(editorAvailable && independent);
+	outputHeightSpin->setEnabled(editorAvailable && independent);
 }
 
 void HimotheeMultistreamDock::AddDestination()
@@ -374,6 +431,11 @@ void HimotheeMultistreamDock::AddDestination()
 	config.name = "Destination " + to_string(workingDestinations.size() + 1);
 	config.platform = "Custom RTMP";
 	config.enabled = true;
+	config.encoderMode = HimotheeEncoderMode::Shared;
+	config.videoBitrateKbps = 0;
+	config.audioBitrateKbps = 0;
+	config.outputWidth = 0;
+	config.outputHeight = 0;
 	config.maxRetries = -1;
 	config.retryDelaySeconds = -1;
 	workingDestinations.emplace_back(std::move(config));
@@ -427,6 +489,25 @@ bool HimotheeMultistreamDock::SaveChanges()
 					     QStringLiteral("Destination '%1' needs an RTMP/RTMPS server.")
 						     .arg(QString::fromStdString(config.name)));
 			return false;
+		}
+
+		if (config.encoderMode == HimotheeEncoderMode::Independent) {
+			const bool widthSet = config.outputWidth > 0;
+			const bool heightSet = config.outputHeight > 0;
+			if (widthSet != heightSet) {
+				QMessageBox::warning(
+					this, QStringLiteral("Multistream"),
+					QStringLiteral("Destination '%1' must set both output width and height, or leave both as Match primary.")
+						.arg(QString::fromStdString(config.name)));
+				return false;
+			}
+			if (widthSet && ((config.outputWidth % 2) != 0 || (config.outputHeight % 2) != 0)) {
+				QMessageBox::warning(
+					this, QStringLiteral("Multistream"),
+					QStringLiteral("Destination '%1' needs an even output width and height.")
+						.arg(QString::fromStdString(config.name)));
+				return false;
+			}
 		}
 
 		const QString server = QString::fromStdString(config.server);
@@ -515,6 +596,7 @@ void HimotheeMultistreamDock::RefreshStatus()
 
 	const uint64_t nowMs = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
 	int activeCount = 0;
+	int independentActiveCount = 0;
 	int errorCount = 0;
 	int reconnectingCount = 0;
 	for (int row = 0; row < destinationTree->topLevelItemCount(); row++) {
@@ -554,6 +636,9 @@ void HimotheeMultistreamDock::RefreshStatus()
 		lastBytesById[id] = status.totalBytes;
 		lastSampleMsById[id] = nowMs;
 
+		item->setText(3, status.encoderMode == HimotheeEncoderMode::Independent
+					 ? QStringLiteral("Independent")
+					 : QStringLiteral("Shared"));
 		item->setText(4, StateText(status.state));
 		item->setText(5, QStringLiteral("%1 kbps").arg(bitrateKbps, 0, 'f', 0));
 		item->setText(6, QString::number(status.droppedFrames));
@@ -562,7 +647,9 @@ void HimotheeMultistreamDock::RefreshStatus()
 		item->setText(8, HealthText(status));
 		item->setText(9, FormatBytes(status.totalBytes));
 
-		QString tooltip = QStringLiteral("Mode: Shared Encoder");
+		QString tooltip = status.encoderMode == HimotheeEncoderMode::Independent
+					  ? QStringLiteral("Mode: Independent Encoder")
+					  : QStringLiteral("Mode: Shared Encoder");
 		if (!status.videoCodec.empty() || !status.audioCodec.empty()) {
 			tooltip += QStringLiteral("\nCodecs: %1 / %2")
 					   .arg(QString::fromStdString(status.videoCodec),
@@ -576,6 +663,9 @@ void HimotheeMultistreamDock::RefreshStatus()
 		if (status.state == HimotheeDestinationState::Active ||
 		    status.state == HimotheeDestinationState::Reconnecting) {
 			activeCount++;
+			if (status.encoderMode == HimotheeEncoderMode::Independent) {
+				independentActiveCount++;
+			}
 		}
 		if (status.state == HimotheeDestinationState::Error) {
 			errorCount++;
@@ -586,10 +676,11 @@ void HimotheeMultistreamDock::RefreshStatus()
 	}
 
 	summaryLabel->setText(
-		QStringLiteral("Mode: Shared Encoder  |  Primary: %1  |  Secondary live: %2/%3  |  Reconnecting: %4  |  Errors: %5")
+		QStringLiteral("Primary: %1  |  Secondary live: %2/%3  |  Independent: %4  |  Reconnecting: %5  |  Errors: %6")
 			.arg(primaryActive ? QStringLiteral("Live") : QStringLiteral("Stopped"))
 			.arg(activeCount)
 			.arg(manager->EnabledCount())
+			.arg(independentActiveCount)
 			.arg(reconnectingCount)
 			.arg(errorCount));
 
