@@ -128,17 +128,18 @@ void HimotheeMultistreamDock::BuildUi()
 	layout->addWidget(summaryLabel);
 
 	destinationTree = new QTreeWidget(root);
-	destinationTree->setColumnCount(12);
+	destinationTree->setColumnCount(13);
 	destinationTree->setHeaderLabels(
 		{QStringLiteral("Destination"), QStringLiteral("Platform"), QStringLiteral("Enabled"),
 		 QStringLiteral("Mode"), QStringLiteral("State"), QStringLiteral("Bitrate"),
 		 QStringLiteral("Dropped"), QStringLiteral("Connect"), QStringLiteral("Health"),
-		 QStringLiteral("Uptime"), QStringLiteral("R/E"), QStringLiteral("Data")});
+		 QStringLiteral("Uptime"), QStringLiteral("R/E"), QStringLiteral("Data"),
+		 QStringLiteral("Audio")});
 	destinationTree->setRootIsDecorated(false);
 	destinationTree->setAlternatingRowColors(true);
 	destinationTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	destinationTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	for (int column = 1; column < 12; column++) {
+	for (int column = 1; column < 13; column++) {
 		destinationTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
 	}
 	layout->addWidget(destinationTree, 1);
@@ -185,6 +186,18 @@ void HimotheeMultistreamDock::BuildUi()
 	audioBitrateSpin->setSpecialValueText(QStringLiteral("Match primary"));
 	audioBitrateSpin->setSuffix(QStringLiteral(" kbps"));
 	form->addRow(QStringLiteral("Audio bitrate"), audioBitrateSpin);
+
+	audioTrackCombo = new QComboBox(editorGroup);
+	for (int track = 1; track <= MAX_AUDIO_MIXES; track++) {
+		const string key = "Track" + to_string(track) + "Name";
+		const char *configuredName = config_get_string(main->Config(), "AdvOut", key.c_str());
+		QString label = QStringLiteral("Track %1").arg(track);
+		if (configuredName && *configuredName) {
+			label += QStringLiteral(" — %1").arg(QString::fromUtf8(configuredName));
+		}
+		audioTrackCombo->addItem(label, track);
+	}
+	form->addRow(QStringLiteral("Audio track"), audioTrackCombo);
 
 	outputWidthSpin = new QSpinBox(editorGroup);
 	outputWidthSpin->setRange(0, 7680);
@@ -330,9 +343,7 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
 					 ? QStringLiteral("Independent")
 					 : QStringLiteral("Shared"));
-		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
-					 ? QStringLiteral("Independent")
-					 : QStringLiteral("Shared"));
+		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
 		item->setText(4, config.enabled ? QStringLiteral("Ready") : QStringLiteral("Disabled"));
 		item->setText(5, QStringLiteral("0 kbps"));
 		item->setText(6, QStringLiteral("0"));
@@ -341,6 +352,7 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(9, QStringLiteral("0:00"));
 		item->setText(10, QStringLiteral("0/0"));
 		item->setText(11, QStringLiteral("0 B"));
+		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
 	}
 }
 
@@ -364,6 +376,8 @@ void HimotheeMultistreamDock::LoadEditor(int index)
 	encoderModeCombo->setCurrentIndex(config.encoderMode == HimotheeEncoderMode::Independent ? 1 : 0);
 	videoBitrateSpin->setValue(config.videoBitrateKbps);
 	audioBitrateSpin->setValue(config.audioBitrateKbps);
+	const int audioTrackIndex = audioTrackCombo->findData(static_cast<int>(config.audioTrack));
+	audioTrackCombo->setCurrentIndex(audioTrackIndex >= 0 ? audioTrackIndex : 0);
 	outputWidthSpin->setValue(static_cast<int>(config.outputWidth));
 	outputHeightSpin->setValue(static_cast<int>(config.outputHeight));
 	switch (config.reconnectPolicy) {
@@ -403,6 +417,7 @@ void HimotheeMultistreamDock::StoreEditor()
 		encoderModeCombo->currentIndex() == 1 ? HimotheeEncoderMode::Independent : HimotheeEncoderMode::Shared;
 	config.videoBitrateKbps = videoBitrateSpin->value();
 	config.audioBitrateKbps = audioBitrateSpin->value();
+	config.audioTrack = static_cast<uint32_t>(audioTrackCombo->currentData().toInt());
 	config.outputWidth = static_cast<uint32_t>(outputWidthSpin->value());
 	config.outputHeight = static_cast<uint32_t>(outputHeightSpin->value());
 	switch (reconnectPolicyCombo->currentIndex()) {
@@ -437,6 +452,7 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	nameEdit->setEnabled(enabled);
 	enabledCheck->setEnabled(enabled);
 	encoderModeCombo->setEnabled(enabled);
+	audioTrackCombo->setEnabled(enabled);
 	reconnectPolicyCombo->setEnabled(enabled);
 	serverEdit->setEnabled(enabled);
 	keyEdit->setEnabled(enabled);
@@ -462,7 +478,8 @@ void HimotheeMultistreamDock::UpdateEncoderControls()
 	const bool independent = encoderModeCombo->currentIndex() == 1;
 
 	videoBitrateSpin->setEnabled(editorAvailable && independent);
-	audioBitrateSpin->setEnabled(editorAvailable && independent);
+	audioBitrateSpin->setEnabled(editorAvailable);
+	audioTrackCombo->setEnabled(editorAvailable);
 	outputWidthSpin->setEnabled(editorAvailable && independent);
 	outputHeightSpin->setEnabled(editorAvailable && independent);
 }
@@ -492,6 +509,7 @@ void HimotheeMultistreamDock::AddDestination()
 	config.encoderMode = HimotheeEncoderMode::Shared;
 	config.videoBitrateKbps = 0;
 	config.audioBitrateKbps = 0;
+	config.audioTrack = 1;
 	config.outputWidth = 0;
 	config.outputHeight = 0;
 	config.reconnectPolicy = HimotheeReconnectPolicy::Inherit;
@@ -680,6 +698,11 @@ void HimotheeMultistreamDock::RefreshStatus()
 			item->setText(9, QStringLiteral("0:00"));
 			item->setText(10, QStringLiteral("0/0"));
 			item->setText(11, QStringLiteral("0 B"));
+			const int configIndex = item->data(0, Qt::UserRole).toInt();
+			if (configIndex >= 0 && configIndex < static_cast<int>(workingDestinations.size())) {
+				item->setText(12, QStringLiteral("Track %1")
+							.arg(workingDestinations[static_cast<size_t>(configIndex)].audioTrack));
+			}
 			item->setToolTip(4, QString());
 			lastBytesById.erase(id);
 			lastSampleMsById.erase(id);
@@ -711,6 +734,7 @@ void HimotheeMultistreamDock::RefreshStatus()
 		item->setText(9, FormatDuration(status.uptimeSeconds));
 		item->setText(10, QStringLiteral("%1/%2").arg(status.reconnectCount).arg(status.errorCount));
 		item->setText(11, FormatBytes(status.totalBytes));
+		item->setText(12, QStringLiteral("Track %1").arg(status.audioTrack));
 		totalReconnectEvents += status.reconnectCount;
 		totalErrorEvents += status.errorCount;
 
@@ -722,6 +746,10 @@ void HimotheeMultistreamDock::RefreshStatus()
 					   .arg(QString::fromStdString(status.videoCodec),
 						QString::fromStdString(status.audioCodec));
 		}
+		tooltip += QStringLiteral("\nAudio: Track %1 (%2 encoder)")
+				   .arg(status.audioTrack)
+				   .arg(status.dedicatedAudioEncoder ? QStringLiteral("dedicated")
+								    : QStringLiteral("shared"));
 		tooltip += QStringLiteral("\nState time: %1").arg(FormatDuration(status.stateSeconds));
 		tooltip += QStringLiteral("\nReconnects: %1 | Errors: %2")
 				   .arg(status.reconnectCount)
