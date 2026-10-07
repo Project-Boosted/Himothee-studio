@@ -1,0 +1,83 @@
+name: Himothee Stage 5 - Shared Encoder
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/shared-encoder-mode
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64-shared-encoder:
+    name: Windows x64 shared encoder
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout shared encoder branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+          Write-Host "Version description: $(git describe --always --tags --dirty=-modified)"
+
+      - name: Guard against committed stream keys
+        run: |
+          $matches = git grep -n -E '"key"[[:space:]]*:[[:space:]]*"[^"]{8,}"' -- ':!docs/himothee/**'
+          if ($LASTEXITCODE -eq 0 -and $matches) {
+            Write-Host $matches
+            throw 'Possible stream key found in tracked source.'
+          }
+          exit 0
+
+      - name: Build Himothee Studio shared encoder mode
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate Himothee v0.5 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.5.0') { throw 'Wrong Himothee version' }
+
+      - name: Verify shared encoder implementation
+        run: |
+          $manager = "$Env:GITHUB_WORKSPACE\frontend\utility\HimotheeMultistream.cpp"
+          $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeMultistreamDock.cpp"
+          if (-not (Select-String -Path $manager -Pattern 'obs_output_get_supported_video_codecs' -Quiet)) {
+            throw 'Shared encoder codec validation is missing'
+          }
+          if (-not (Select-String -Path $dock -Pattern 'Shared Encoder' -Quiet)) {
+            throw 'Shared Encoder UI indicator is missing'
+          }
+          if (-not (Select-String -Path $dock -Pattern 'kbps' -Quiet)) {
+            throw 'Live bitrate UI is missing'
+          }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.5.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.5.0-Shared-Encoder-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
