@@ -60,9 +60,9 @@ const char *HimotheeChatConnectionStateName(HimotheeChatConnectionState state) n
 HimotheeChatManager::HimotheeChatManager()
 {
 	providerStatuses = {
-		{HimotheeChatPlatform::Twitch, HimotheeChatConnectionState::Disconnected, {}, {}},
-		{HimotheeChatPlatform::YouTube, HimotheeChatConnectionState::Disconnected, {}, {}},
-		{HimotheeChatPlatform::Kick, HimotheeChatConnectionState::Disconnected, {}, {}},
+		{HimotheeChatPlatform::Twitch, HimotheeChatConnectionState::Disconnected, {}, {}, true, {}},
+		{HimotheeChatPlatform::YouTube, HimotheeChatConnectionState::Disconnected, {}, {}, true, {}},
+		{HimotheeChatPlatform::Kick, HimotheeChatConnectionState::Disconnected, {}, {}, true, {}},
 	};
 
 	HimotheeChatMessage ready;
@@ -88,6 +88,8 @@ void HimotheeChatManager::RegisterProvider(unique_ptr<HimotheeChatProvider> prov
 	status.platform = provider->Platform();
 	status.state = provider->State();
 	status.accountName = provider->AccountName();
+	status.channelName = provider->ChannelName();
+	status.automaticChannel = provider->AutomaticChannel();
 
 	{
 		lock_guard lock(mutex);
@@ -156,8 +158,94 @@ void HimotheeChatManager::DisconnectAll()
 		}
 		provider->Disconnect();
 		SetProviderStatus({provider->Platform(), HimotheeChatConnectionState::Disconnected,
-				   provider->AccountName(), {}});
+				   provider->AccountName(), provider->ChannelName(), provider->AutomaticChannel(), {}});
 	}
+}
+
+bool HimotheeChatManager::ConnectProvider(HimotheeChatPlatform platform)
+{
+	HimotheeChatProvider *provider = nullptr;
+	{
+		lock_guard lock(mutex);
+		auto it = find_if(providers.begin(), providers.end(),
+				  [&](const auto &candidate) { return candidate && candidate->Platform() == platform; });
+		if (it != providers.end()) {
+			provider = it->get();
+		}
+	}
+
+	if (!provider) {
+		return false;
+	}
+
+	HimotheeChatProviderStatus status;
+	status.platform = platform;
+	status.state = HimotheeChatConnectionState::Connecting;
+	status.accountName = provider->AccountName();
+	status.channelName = provider->ChannelName();
+	status.automaticChannel = provider->AutomaticChannel();
+	SetProviderStatus(status);
+
+	const bool accepted = provider->Connect();
+	if (!accepted) {
+		status.state = HimotheeChatConnectionState::Error;
+		status.lastError = "Provider connection could not be started.";
+		SetProviderStatus(std::move(status));
+	}
+	return accepted;
+}
+
+void HimotheeChatManager::DisconnectProvider(HimotheeChatPlatform platform)
+{
+	HimotheeChatProvider *provider = nullptr;
+	{
+		lock_guard lock(mutex);
+		auto it = find_if(providers.begin(), providers.end(),
+				  [&](const auto &candidate) { return candidate && candidate->Platform() == platform; });
+		if (it != providers.end()) {
+			provider = it->get();
+		}
+	}
+
+	if (!provider) {
+		return;
+	}
+
+	provider->Disconnect();
+	SetProviderStatus({platform, HimotheeChatConnectionState::Disconnected, provider->AccountName(),
+			   provider->ChannelName(), provider->AutomaticChannel(), {}});
+}
+
+void HimotheeChatManager::SetChannelOverride(HimotheeChatPlatform platform, const string &channel)
+{
+	HimotheeChatProvider *provider = nullptr;
+	{
+		lock_guard lock(mutex);
+		auto it = find_if(providers.begin(), providers.end(),
+				  [&](const auto &candidate) { return candidate && candidate->Platform() == platform; });
+		if (it != providers.end()) {
+			provider = it->get();
+		}
+	}
+
+	if (!provider) {
+		return;
+	}
+
+	provider->SetChannelOverride(channel);
+
+	auto status = ProviderStatus(platform);
+	status.channelName = provider->ChannelName();
+	status.automaticChannel = provider->AutomaticChannel();
+	SetProviderStatus(std::move(status));
+}
+
+HimotheeChatProviderStatus HimotheeChatManager::ProviderStatus(HimotheeChatPlatform platform) const
+{
+	lock_guard lock(mutex);
+	auto it = find_if(providerStatuses.begin(), providerStatuses.end(),
+			  [&](const auto &status) { return status.platform == platform; });
+	return it != providerStatuses.end() ? *it : HimotheeChatProviderStatus{platform};
 }
 
 bool HimotheeChatManager::SendMessage(HimotheeChatPlatform target, const string &message)
