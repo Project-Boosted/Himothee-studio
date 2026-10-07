@@ -1,8 +1,12 @@
 target_sources(
   obs-studio
   PRIVATE
+    chat/HimotheeChat.cpp
+    chat/HimotheeChat.hpp
     docks/OBSDock.cpp
     docks/OBSDock.hpp
+    docks/HimotheeChatDock.cpp
+    docks/HimotheeChatDock.hpp
     docks/HimotheeMultistreamDock.cpp
     docks/HimotheeMultistreamDock.hpp
 )

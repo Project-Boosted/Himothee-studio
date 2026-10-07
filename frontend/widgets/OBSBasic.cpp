@@ -30,6 +30,8 @@
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
 #endif
+#include <chat/HimotheeChat.hpp>
+#include <docks/HimotheeChatDock.hpp>
 #include <docks/HimotheeMultistreamDock.hpp>
 #include <dialogs/NameDialog.hpp>
 #include <dialogs/OBSAbout.hpp>
@@ -233,6 +235,7 @@ extern void setupDockAction(QDockWidget *dock);
 OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new Ui::OBSBasic)
 {
 	collections = {};
+	himotheeChatManager = make_unique<HimotheeChatManager>();
 
 	setAttribute(Qt::WA_NativeWindow);
 
@@ -378,6 +381,10 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 
 	himotheeMultistreamDock = new HimotheeMultistreamDock(this);
 	addDockWidget(Qt::RightDockWidgetArea, himotheeMultistreamDock);
+
+	himotheeChatDock = new HimotheeChatDock(this, himotheeChatManager.get());
+	addDockWidget(Qt::RightDockWidgetArea, himotheeChatDock);
+	tabifyDockWidget(himotheeMultistreamDock, himotheeChatDock);
 
 	copyActionsDynamicProperties();
 
@@ -540,6 +547,7 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	SETUP_DOCK(controlsDock);
 	SETUP_DOCK(statsDock);
 	SETUP_DOCK(himotheeMultistreamDock);
+	SETUP_DOCK(himotheeChatDock);
 #undef SETUP_DOCK
 
 	// Register shortcuts for Undo/Redo
