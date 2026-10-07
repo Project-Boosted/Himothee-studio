@@ -129,6 +129,12 @@ void HimotheeMultistreamDock::BuildUi()
 	summaryLabel = new QLabel(QStringLiteral("Primary stream: Stopped"), root);
 	layout->addWidget(summaryLabel);
 
+	errorLabel = new QLabel(root);
+	errorLabel->setWordWrap(true);
+	errorLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	errorLabel->setVisible(false);
+	layout->addWidget(errorLabel);
+
 	destinationTree = new QTreeWidget(root);
 	destinationTree->setColumnCount(13);
 	destinationTree->setHeaderLabels(
@@ -693,6 +699,8 @@ void HimotheeMultistreamDock::RefreshStatus()
 
 	const bool primaryActive = main->StreamingActive();
 	streamButton->setText(primaryActive ? QStringLiteral("Stop Streaming") : QStringLiteral("Start Streaming"));
+	errorLabel->setVisible(false);
+	errorLabel->clear();
 
 	if (!manager) {
 		summaryLabel->setText(QStringLiteral("Multistream engine unavailable"));
@@ -833,6 +841,12 @@ void HimotheeMultistreamDock::RefreshStatus()
 					 it->second.state == HimotheeDestinationState::Starting;
 			selectedFailed = it->second.state == HimotheeDestinationState::Error;
 			selectedCanStart = !selectedActive && it->second.state != HimotheeDestinationState::Stopping;
+
+			if (!it->second.lastError.empty()) {
+				errorLabel->setText(QStringLiteral("Selected destination error: %1")
+							.arg(QString::fromStdString(it->second.lastError)));
+				errorLabel->setVisible(true);
+			}
 		}
 	}
 
