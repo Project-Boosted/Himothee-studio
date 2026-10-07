@@ -14,7 +14,9 @@
 #include <QWebSocket>
 #endif
 
+class QJsonObject;
 class QNetworkReply;
+class QUrl;
 
 class HimotheeTwitchChatProvider : public QObject, public HimotheeChatProvider {
 public:
