@@ -9,6 +9,11 @@
 
 class OBSBasic;
 
+enum class HimotheeEncoderMode {
+	Shared,
+	Independent,
+};
+
 enum class HimotheeDestinationState {
 	Disabled,
 	Idle,
@@ -25,6 +30,11 @@ struct HimotheeDestinationConfig {
 	std::string name;
 	std::string platform = "Custom RTMP";
 	bool enabled = true;
+	HimotheeEncoderMode encoderMode = HimotheeEncoderMode::Shared;
+	int videoBitrateKbps = 0;
+	int audioBitrateKbps = 0;
+	uint32_t outputWidth = 0;
+	uint32_t outputHeight = 0;
 
 	std::string server;
 	std::string key;
@@ -40,6 +50,7 @@ struct HimotheeDestinationConfig {
 struct HimotheeDestinationStatus {
 	std::string id;
 	std::string name;
+	HimotheeEncoderMode encoderMode = HimotheeEncoderMode::Shared;
 	HimotheeDestinationState state = HimotheeDestinationState::Idle;
 	std::string lastError;
 	uint64_t totalBytes = 0;
@@ -82,7 +93,7 @@ private:
 	std::string loadedProfilePath;
 
 	bool LoadForCurrentProfile();
-	bool BuildSharedRuntime(const HimotheeDestinationConfig &config, size_t index, obs_output_t *primaryOutput);
+	bool BuildDestinationRuntime(const HimotheeDestinationConfig &config, size_t index, obs_output_t *primaryOutput);
 
 	static void OnOutputStart(void *data, calldata_t *params);
 	static void OnOutputStop(void *data, calldata_t *params);
