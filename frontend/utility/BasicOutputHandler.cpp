@@ -223,6 +223,8 @@ const char *GetStreamOutputType(const obs_service_t *service)
 
 BasicOutputHandler::BasicOutputHandler(OBSBasic *main_) : main(main_)
 {
+	himotheeMultistream = make_unique<HimotheeMultistreamManager>(main_);
+
 	if (main->vcamEnabled) {
 		virtualCam = obs_output_create(VIRTUAL_CAM_ID, "virtualcam_output", nullptr, nullptr);
 
