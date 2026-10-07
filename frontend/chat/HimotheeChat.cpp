@@ -131,6 +131,8 @@ void HimotheeChatManager::ConnectAll()
 		status.platform = provider->Platform();
 		status.state = HimotheeChatConnectionState::Connecting;
 		status.accountName = provider->AccountName();
+		status.channelName = provider->ChannelName();
+		status.automaticChannel = provider->AutomaticChannel();
 		SetProviderStatus(status);
 
 		const bool connected = provider->Connect();
