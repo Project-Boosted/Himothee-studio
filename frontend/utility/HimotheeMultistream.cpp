@@ -116,6 +116,10 @@ bool HimotheeMultistreamManager::Load()
 		HimotheeDestinationConfig config;
 		config.id = obs_data_get_string(item, "id");
 		config.name = obs_data_get_string(item, "name");
+		config.platform = obs_data_get_string(item, "platform");
+		if (config.platform.empty()) {
+			config.platform = "Custom RTMP";
+		}
 		config.enabled = obs_data_get_bool(item, "enabled");
 		config.server = obs_data_get_string(item, "server");
 		config.key = obs_data_get_string(item, "key");
@@ -160,6 +164,7 @@ bool HimotheeMultistreamManager::Save() const
 		OBSDataAutoRelease item = obs_data_create();
 		obs_data_set_string(item, "id", config.id.c_str());
 		obs_data_set_string(item, "name", config.name.c_str());
+		obs_data_set_string(item, "platform", config.platform.c_str());
 		obs_data_set_bool(item, "enabled", config.enabled);
 		obs_data_set_string(item, "server", config.server.c_str());
 		obs_data_set_string(item, "key", config.key.c_str());
