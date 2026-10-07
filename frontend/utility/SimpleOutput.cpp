@@ -743,16 +743,21 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 		SetupVodTrack(service);
 	}
 
+	himotheeMultistream->PrepareSharedOutputs(streamOutput);
+
 	if (obs_output_start(streamOutput)) {
 		if (multitrackVideo && multitrackVideoActive) {
 			multitrackVideo->StartedStreaming();
 		}
+		himotheeMultistream->StartPrepared();
 		return true;
 	}
 
 	if (multitrackVideo && multitrackVideoActive) {
 		multitrackVideoActive = false;
 	}
+
+	himotheeMultistream->ResetPrepared();
 
 	const char *error = obs_output_get_last_error(streamOutput);
 	bool hasLastError = error && *error;
@@ -922,6 +927,8 @@ bool SimpleOutput::StartReplayBuffer()
 
 void SimpleOutput::StopStreaming(bool force)
 {
+	himotheeMultistream->StopAll(force);
+
 	auto output = StreamingOutput();
 	if (force && output) {
 		obs_output_force_stop(output);
