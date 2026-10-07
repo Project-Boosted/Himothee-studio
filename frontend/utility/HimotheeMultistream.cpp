@@ -269,11 +269,11 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 #endif
 	obs_output_update(runtime->output, outputSettings);
 
-	signal_handler_t *signals = obs_output_get_signal_handler(runtime->output);
-	runtime->startSignal.Connect(signals, "start", OnOutputStart, runtime.get());
-	runtime->stopSignal.Connect(signals, "stop", OnOutputStop, runtime.get());
-	runtime->reconnectSignal.Connect(signals, "reconnect", OnOutputReconnect, runtime.get());
-	runtime->reconnectSuccessSignal.Connect(signals, "reconnect_success", OnOutputReconnectSuccess, runtime.get());
+	signal_handler_t *signalHandler = obs_output_get_signal_handler(runtime->output);
+	runtime->startSignal.Connect(signalHandler, "start", OnOutputStart, runtime.get());
+	runtime->stopSignal.Connect(signalHandler, "stop", OnOutputStop, runtime.get());
+	runtime->reconnectSignal.Connect(signalHandler, "reconnect", OnOutputReconnect, runtime.get());
+	runtime->reconnectSuccessSignal.Connect(signalHandler, "reconnect_success", OnOutputReconnectSuccess, runtime.get());
 
 	runtime->state = HimotheeDestinationState::Prepared;
 	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using shared encoders.",
