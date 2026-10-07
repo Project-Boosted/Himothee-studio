@@ -44,14 +44,14 @@ jobs:
           target: x64
           config: RelWithDebInfo
 
-      - name: Validate Himothee v0.8 identity
+      - name: Validate Himothee v0.8.1 identity
         run: |
           $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
           $info = $exe.VersionInfo
           Write-Host "ProductName: $($info.ProductName)"
           Write-Host "FileVersion: $($info.FileVersion)"
           if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
-          if ($info.FileVersion -ne '0.8.0') { throw 'Wrong Himothee version' }
+          if ($info.FileVersion -ne '0.8.1') { throw 'Wrong Himothee version' }
 
       - name: Verify audio routing implementation
         run: |
@@ -88,10 +88,10 @@ jobs:
           config: RelWithDebInfo
           package: false
 
-      - name: Upload Himothee Studio v0.8.0
+      - name: Upload Himothee Studio v0.8.1
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Himothee-Studio-v0.8.0-Audio-Routing-Windows-x64
+          name: Himothee-Studio-v0.8.1-Audio-Routing-Hotfix-Windows-x64
           path: build_x64/obs-studio-*-windows-x64.zip
           if-no-files-found: error
           retention-days: 14
