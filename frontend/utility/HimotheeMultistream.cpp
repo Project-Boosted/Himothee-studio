@@ -252,9 +252,15 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		return true;
 	}
 
+	auto runtime = make_unique<DestinationRuntime>();
+	runtime->config = config;
+
 	if (config.server.empty()) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->lastError = "No RTMP/RTMPS server is configured.";
 		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' has no server URL and will be skipped.",
 		     config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
@@ -262,15 +268,15 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 	obs_encoder_t *audioEncoder = obs_output_get_audio_encoder(primaryOutput, 0);
 
 	if (!videoEncoder || !audioEncoder) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->lastError = "The primary stream does not expose compatible shared video/audio encoders.";
 		blog(LOG_WARNING,
 		     "[Himothee Multistream] Destination '%s' cannot use shared mode because the primary output "
 		     "does not expose both primary video and audio encoders.",
 		     config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
-
-	auto runtime = make_unique<DestinationRuntime>();
-	runtime->config = config;
 
 	OBSDataAutoRelease serviceSettings = obs_data_create();
 	obs_data_set_string(serviceSettings, "server", config.server.c_str());
@@ -286,6 +292,7 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		runtime->state = HimotheeDestinationState::Error;
 		runtime->lastError = "Failed to create RTMP service.";
 		blog(LOG_WARNING, "[Himothee Multistream] Failed to create service for '%s'.", config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
@@ -294,6 +301,7 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		runtime->state = HimotheeDestinationState::Error;
 		runtime->lastError = "No compatible OBS output type is available.";
 		blog(LOG_WARNING, "[Himothee Multistream] No compatible output for '%s'.", config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
@@ -303,6 +311,7 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		runtime->state = HimotheeDestinationState::Error;
 		runtime->lastError = "Failed to create streaming output.";
 		blog(LOG_WARNING, "[Himothee Multistream] Failed to create output for '%s'.", config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
@@ -317,6 +326,7 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 				     "' is not supported by this destination output.";
 		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared video codec '%s'.",
 		     config.name.c_str(), videoCodec ? videoCodec : "unknown");
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
@@ -326,6 +336,7 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 				     "' is not supported by this destination output.";
 		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared audio codec '%s'.",
 		     config.name.c_str(), audioCodec ? audioCodec : "unknown");
+		runtimes.emplace_back(std::move(runtime));
 		return false;
 	}
 
