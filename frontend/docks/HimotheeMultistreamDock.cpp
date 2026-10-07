@@ -658,6 +658,8 @@ void HimotheeMultistreamDock::RefreshStatus()
 	int independentActiveCount = 0;
 	int errorCount = 0;
 	int reconnectingCount = 0;
+	uint32_t totalReconnectEvents = 0;
+	uint32_t totalErrorEvents = 0;
 	for (int row = 0; row < destinationTree->topLevelItemCount(); row++) {
 		auto *item = destinationTree->topLevelItem(row);
 		const string id = item->data(0, Qt::UserRole + 1).toString().toStdString();
@@ -675,7 +677,9 @@ void HimotheeMultistreamDock::RefreshStatus()
 			item->setText(6, QStringLiteral("0"));
 			item->setText(7, QStringLiteral("-"));
 			item->setText(8, QStringLiteral("-"));
-			item->setText(9, QStringLiteral("0 B"));
+			item->setText(9, QStringLiteral("0:00"));
+			item->setText(10, QStringLiteral("0/0"));
+			item->setText(11, QStringLiteral("0 B"));
 			item->setToolTip(4, QString());
 			lastBytesById.erase(id);
 			lastSampleMsById.erase(id);
@@ -704,7 +708,11 @@ void HimotheeMultistreamDock::RefreshStatus()
 		item->setText(7, status.connectTimeMs >= 0 ? QStringLiteral("%1 ms").arg(status.connectTimeMs)
 						       : QStringLiteral("-"));
 		item->setText(8, HealthText(status));
-		item->setText(9, FormatBytes(status.totalBytes));
+		item->setText(9, FormatDuration(status.uptimeSeconds));
+		item->setText(10, QStringLiteral("%1/%2").arg(status.reconnectCount).arg(status.errorCount));
+		item->setText(11, FormatBytes(status.totalBytes));
+		totalReconnectEvents += status.reconnectCount;
+		totalErrorEvents += status.errorCount;
 
 		QString tooltip = status.encoderMode == HimotheeEncoderMode::Independent
 					  ? QStringLiteral("Mode: Independent Encoder")
@@ -714,6 +722,10 @@ void HimotheeMultistreamDock::RefreshStatus()
 					   .arg(QString::fromStdString(status.videoCodec),
 						QString::fromStdString(status.audioCodec));
 		}
+		tooltip += QStringLiteral("\nState time: %1").arg(FormatDuration(status.stateSeconds));
+		tooltip += QStringLiteral("\nReconnects: %1 | Errors: %2")
+				   .arg(status.reconnectCount)
+				   .arg(status.errorCount);
 		if (!status.lastError.empty()) {
 			tooltip += QStringLiteral("\nLast error: %1").arg(QString::fromStdString(status.lastError));
 		}
@@ -735,17 +747,20 @@ void HimotheeMultistreamDock::RefreshStatus()
 	}
 
 	summaryLabel->setText(
-		QStringLiteral("Primary: %1  |  Secondary live: %2/%3  |  Independent: %4  |  Reconnecting: %5  |  Errors: %6")
+		QStringLiteral("Primary: %1  |  Live: %2/%3  |  Independent: %4  |  Reconnecting: %5  |  Current errors: %6  |  R/E: %7/%8")
 			.arg(primaryActive ? QStringLiteral("Live") : QStringLiteral("Stopped"))
 			.arg(activeCount)
 			.arg(manager->EnabledCount())
 			.arg(independentActiveCount)
 			.arg(reconnectingCount)
-			.arg(errorCount));
+			.arg(errorCount)
+			.arg(totalReconnectEvents)
+			.arg(totalErrorEvents));
 
 	const bool selected = currentIndex >= 0 && currentIndex < static_cast<int>(workingDestinations.size());
 	bool selectedActive = false;
 	bool selectedCanStart = false;
+	bool selectedFailed = false;
 	if (selected) {
 		const string &id = workingDestinations[static_cast<size_t>(currentIndex)].id;
 		auto it = statusById.find(id);
@@ -753,9 +768,13 @@ void HimotheeMultistreamDock::RefreshStatus()
 			selectedActive = it->second.state == HimotheeDestinationState::Active ||
 					 it->second.state == HimotheeDestinationState::Reconnecting ||
 					 it->second.state == HimotheeDestinationState::Starting;
+			selectedFailed = it->second.state == HimotheeDestinationState::Error;
 			selectedCanStart = !selectedActive && it->second.state != HimotheeDestinationState::Stopping;
 		}
 	}
+
+	startSelectedButton->setText(selectedFailed ? QStringLiteral("Retry Selected")
+						    : QStringLiteral("Start Selected"));
 
 	startSelectedButton->setEnabled(primaryActive && selected && selectedCanStart &&
 					 workingDestinations[static_cast<size_t>(currentIndex)].enabled);
