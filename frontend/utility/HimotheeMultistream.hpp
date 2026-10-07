@@ -45,6 +45,10 @@ struct HimotheeDestinationStatus {
 	uint64_t totalBytes = 0;
 	int droppedFrames = 0;
 	int totalFrames = 0;
+	int connectTimeMs = -1;
+	float congestion = 0.0f;
+	std::string videoCodec;
+	std::string audioCodec;
 };
 
 class HimotheeMultistreamManager {
