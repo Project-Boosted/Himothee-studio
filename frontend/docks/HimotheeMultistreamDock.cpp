@@ -181,7 +181,8 @@ void HimotheeMultistreamDock::BuildUi()
 	outputHeightSpin->setSpecialValueText(QStringLiteral("Match primary"));
 	form->addRow(QStringLiteral("Output height"), outputHeightSpin);
 
-	connect(encoderModeCombo, &QComboBox::currentIndexChanged, this, [this]() { UpdateEncoderControls(); });
+	connect(encoderModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this,
+		[this](int) { UpdateEncoderControls(); });
 
 	serverEdit = new QLineEdit(editorGroup);
 	serverEdit->setPlaceholderText(QStringLiteral("rtmps://server.example/app"));
