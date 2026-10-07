@@ -2,6 +2,8 @@
 
 #include <widgets/OBSBasic.hpp>
 
+#include <util/config-file.h>
+
 #include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
@@ -343,7 +345,6 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
 					 ? QStringLiteral("Independent")
 					 : QStringLiteral("Shared"));
-		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
 		item->setText(4, config.enabled ? QStringLiteral("Ready") : QStringLiteral("Disabled"));
 		item->setText(5, QStringLiteral("0 kbps"));
 		item->setText(6, QStringLiteral("0"));
@@ -443,6 +444,10 @@ void HimotheeMultistreamDock::StoreEditor()
 		item->setText(0, QString::fromStdString(config.name));
 		item->setText(1, QString::fromStdString(config.platform));
 		item->setText(2, config.enabled ? QStringLiteral("On") : QStringLiteral("Off"));
+		item->setText(3, config.encoderMode == HimotheeEncoderMode::Independent
+					 ? QStringLiteral("Independent")
+					 : QStringLiteral("Shared"));
+		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
 	}
 }
 
