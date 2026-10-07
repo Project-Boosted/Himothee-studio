@@ -159,6 +159,12 @@ bool HimotheeTwitchChatProvider::Connect()
 		return false;
 	}
 
+	if (!auth->RefreshAccessToken()) {
+		UpdateStatus(HimotheeChatConnectionState::Error,
+			     "Could not refresh the connected Twitch OAuth token. Reconnect Twitch in Settings > Stream.");
+		return false;
+	}
+
 	accessToken = auth->AccessToken();
 	accountLogin = auth->AccountName();
 
