@@ -4,6 +4,7 @@
 #include <widgets/OBSBasic.hpp>
 
 #include <util/config-file.h>
+#include <util/platform.h>
 
 #include <algorithm>
 #include <cctype>
@@ -81,6 +82,10 @@ struct HimotheeMultistreamManager::DestinationRuntime {
 	HimotheeDestinationConfig config;
 	HimotheeDestinationState state = HimotheeDestinationState::Idle;
 	string lastError;
+	uint32_t reconnectCount = 0;
+	uint32_t errorCount = 0;
+	uint64_t stateChangedAtNs = os_gettime_ns();
+	uint64_t activeSinceNs = 0;
 
 	OBSServiceAutoRelease service;
 	OBSOutputAutoRelease output;
@@ -167,6 +172,14 @@ bool HimotheeMultistreamManager::Load()
 		config.audioBitrateKbps = static_cast<int>(obs_data_get_int(item, "audio_bitrate_kbps"));
 		config.outputWidth = static_cast<uint32_t>(obs_data_get_int(item, "output_width"));
 		config.outputHeight = static_cast<uint32_t>(obs_data_get_int(item, "output_height"));
+		const char *reconnectPolicy = obs_data_get_string(item, "reconnect_policy");
+		if (reconnectPolicy && astrcmpi(reconnectPolicy, "enabled") == 0) {
+			config.reconnectPolicy = HimotheeReconnectPolicy::Enabled;
+		} else if (reconnectPolicy && astrcmpi(reconnectPolicy, "disabled") == 0) {
+			config.reconnectPolicy = HimotheeReconnectPolicy::Disabled;
+		} else {
+			config.reconnectPolicy = HimotheeReconnectPolicy::Inherit;
+		}
 		config.server = obs_data_get_string(item, "server");
 		config.key = obs_data_get_string(item, "key");
 		config.useAuth = obs_data_get_bool(item, "use_auth");
@@ -218,6 +231,13 @@ bool HimotheeMultistreamManager::Save() const
 		obs_data_set_int(item, "audio_bitrate_kbps", config.audioBitrateKbps);
 		obs_data_set_int(item, "output_width", config.outputWidth);
 		obs_data_set_int(item, "output_height", config.outputHeight);
+		const char *reconnectPolicy = "inherit";
+		if (config.reconnectPolicy == HimotheeReconnectPolicy::Enabled) {
+			reconnectPolicy = "enabled";
+		} else if (config.reconnectPolicy == HimotheeReconnectPolicy::Disabled) {
+			reconnectPolicy = "disabled";
+		}
+		obs_data_set_string(item, "reconnect_policy", reconnectPolicy);
 		obs_data_set_string(item, "server", config.server.c_str());
 		obs_data_set_string(item, "key", config.key.c_str());
 		obs_data_set_bool(item, "use_auth", config.useAuth);
@@ -414,12 +434,24 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 	obs_output_set_service(runtime->output, runtime->service);
 
 	bool reconnect = config_get_bool(main->Config(), "Output", "Reconnect");
+	if (config.reconnectPolicy == HimotheeReconnectPolicy::Enabled) {
+		reconnect = true;
+	} else if (config.reconnectPolicy == HimotheeReconnectPolicy::Disabled) {
+		reconnect = false;
+	}
+
 	int maxRetries = config.maxRetries >= 0 ? config.maxRetries : config_get_int(main->Config(), "Output", "MaxRetries");
 	int retryDelay =
 		config.retryDelaySeconds >= 0 ? config.retryDelaySeconds : config_get_int(main->Config(), "Output", "RetryDelay");
 
 	if (!reconnect) {
 		maxRetries = 0;
+	} else if (maxRetries <= 0) {
+		maxRetries = 20;
+	}
+
+	if (retryDelay <= 0) {
+		retryDelay = 2;
 	}
 
 	obs_output_set_reconnect_settings(runtime->output, maxRetries, retryDelay);
@@ -449,6 +481,7 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 	runtime->reconnectSuccessSignal.Connect(signalHandler, "reconnect_success", OnOutputReconnectSuccess, runtime.get());
 
 	runtime->state = HimotheeDestinationState::Prepared;
+	runtime->stateChangedAtNs = os_gettime_ns();
 	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using %s encoders.",
 	     config.name.c_str(),
 	     config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
@@ -540,6 +573,7 @@ bool HimotheeMultistreamManager::StartDestination(const string &id)
 	}
 
 	runtime->state = HimotheeDestinationState::Starting;
+	runtime->stateChangedAtNs = os_gettime_ns();
 	if (obs_output_start(runtime->output)) {
 		return true;
 	}
@@ -547,6 +581,8 @@ bool HimotheeMultistreamManager::StartDestination(const string &id)
 	const char *error = obs_output_get_last_error(runtime->output);
 	runtime->lastError = error ? error : "Output failed to start.";
 	runtime->state = HimotheeDestinationState::Error;
+	runtime->stateChangedAtNs = os_gettime_ns();
+	runtime->errorCount++;
 
 	blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' failed to start: %s",
 	     runtime->config.name.c_str(), runtime->lastError.c_str());
@@ -568,6 +604,7 @@ void HimotheeMultistreamManager::StopDestination(const string &id, bool force)
 	}
 
 	runtime->state = HimotheeDestinationState::Stopping;
+	runtime->stateChangedAtNs = os_gettime_ns();
 	if (force) {
 		obs_output_force_stop(runtime->output);
 	} else {
@@ -584,6 +621,7 @@ void HimotheeMultistreamManager::StopAll(bool force)
 
 		if (obs_output_active(runtime->output)) {
 			runtime->state = HimotheeDestinationState::Stopping;
+			runtime->stateChangedAtNs = os_gettime_ns();
 			if (force) {
 				obs_output_force_stop(runtime->output);
 			} else {
@@ -629,6 +667,16 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 		status.encoderMode = runtime->config.encoderMode;
 		status.state = runtime->state;
 		status.lastError = runtime->lastError;
+		status.reconnectCount = runtime->reconnectCount;
+		status.errorCount = runtime->errorCount;
+
+		const uint64_t nowNs = os_gettime_ns();
+		if (runtime->activeSinceNs > 0 && nowNs >= runtime->activeSinceNs) {
+			status.uptimeSeconds = (nowNs - runtime->activeSinceNs) / 1000000000ULL;
+		}
+		if (runtime->stateChangedAtNs > 0 && nowNs >= runtime->stateChangedAtNs) {
+			status.stateSeconds = (nowNs - runtime->stateChangedAtNs) / 1000000000ULL;
+		}
 
 		if (runtime->output) {
 			status.totalBytes = obs_output_get_total_bytes(runtime->output);
@@ -636,7 +684,6 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 			status.totalFrames = obs_output_get_total_frames(runtime->output);
 			status.connectTimeMs = obs_output_get_connect_time_ms(runtime->output);
 			status.congestion = obs_output_get_congestion(runtime->output);
-
 			obs_encoder_t *videoEncoder = obs_output_get_video_encoder(runtime->output);
 			obs_encoder_t *audioEncoder = obs_output_get_audio_encoder(runtime->output, 0);
 			const char *videoCodec = videoEncoder ? obs_encoder_get_codec(videoEncoder) : nullptr;
@@ -655,7 +702,10 @@ void HimotheeMultistreamManager::OnOutputStart(void *data, calldata_t *)
 {
 	auto *runtime = static_cast<DestinationRuntime *>(data);
 	runtime->state = HimotheeDestinationState::Active;
-	runtime->lastError.clear();
+	runtime->stateChangedAtNs = os_gettime_ns();
+	if (runtime->activeSinceNs == 0) {
+		runtime->activeSinceNs = runtime->stateChangedAtNs;
+	}
 	blog(LOG_INFO, "[Himothee Multistream] Destination '%s' is active.", runtime->config.name.c_str());
 }
 
@@ -667,11 +717,13 @@ void HimotheeMultistreamManager::OnOutputStop(void *data, calldata_t *params)
 
 	if (code == OBS_OUTPUT_SUCCESS) {
 		runtime->state = HimotheeDestinationState::Idle;
-		runtime->lastError.clear();
 	} else {
 		runtime->state = HimotheeDestinationState::Error;
 		runtime->lastError = error ? error : "Output stopped with an error.";
+		runtime->errorCount++;
 	}
+	runtime->stateChangedAtNs = os_gettime_ns();
+	runtime->activeSinceNs = 0;
 
 	blog(code == OBS_OUTPUT_SUCCESS ? LOG_INFO : LOG_WARNING,
 	     "[Himothee Multistream] Destination '%s' stopped (code %d, state %s).", runtime->config.name.c_str(),
@@ -682,15 +734,22 @@ void HimotheeMultistreamManager::OnOutputReconnect(void *data, calldata_t *)
 {
 	auto *runtime = static_cast<DestinationRuntime *>(data);
 	runtime->state = HimotheeDestinationState::Reconnecting;
-	blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' is reconnecting.",
-	     runtime->config.name.c_str());
+	runtime->stateChangedAtNs = os_gettime_ns();
+	runtime->reconnectCount++;
+	blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' is reconnecting (attempt %u).",
+	     runtime->config.name.c_str(), runtime->reconnectCount);
+	return;
+
 }
 
 void HimotheeMultistreamManager::OnOutputReconnectSuccess(void *data, calldata_t *)
 {
 	auto *runtime = static_cast<DestinationRuntime *>(data);
 	runtime->state = HimotheeDestinationState::Active;
-	runtime->lastError.clear();
+	runtime->stateChangedAtNs = os_gettime_ns();
+	if (runtime->activeSinceNs == 0) {
+		runtime->activeSinceNs = runtime->stateChangedAtNs;
+	}
 	blog(LOG_INFO, "[Himothee Multistream] Destination '%s' reconnected.",
 	     runtime->config.name.c_str());
 }
