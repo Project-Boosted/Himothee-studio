@@ -3,6 +3,9 @@
 #include <docks/OBSDock.hpp>
 #include <utility/HimotheeMultistream.hpp>
 
+#include <cstdint>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 class OBSBasic;
@@ -51,6 +54,9 @@ private:
 	QPushButton *startSelectedButton = nullptr;
 	QPushButton *stopSelectedButton = nullptr;
 	QTimer *statusTimer = nullptr;
+
+	std::unordered_map<std::string, uint64_t> lastBytesById;
+	std::unordered_map<std::string, uint64_t> lastSampleMsById;
 
 	void BuildUi();
 	void RebuildDestinationTree();
