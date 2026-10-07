@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QHBoxLayout>
+#include <QGroupBox>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -79,6 +80,51 @@ void HimotheeChatDock::BuildUi()
 	connectionLabel = new QLabel(QStringLiteral("Twitch: Offline  |  YouTube: Offline  |  Kick: Offline"), root);
 	connectionLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	layout->addWidget(connectionLabel);
+
+	auto *twitchGroup = new QGroupBox(QStringLiteral("Twitch Chat"), root);
+	auto *twitchLayout = new QHBoxLayout(twitchGroup);
+
+	twitchChannelModeCombo = new QComboBox(twitchGroup);
+	twitchChannelModeCombo->addItem(QStringLiteral("Auto — My Channel"), 0);
+	twitchChannelModeCombo->addItem(QStringLiteral("Custom Channel"), 1);
+	twitchLayout->addWidget(twitchChannelModeCombo);
+
+	twitchChannelEdit = new QLineEdit(twitchGroup);
+	twitchChannelEdit->setPlaceholderText(QStringLiteral("channel login"));
+	twitchChannelEdit->setVisible(false);
+	twitchLayout->addWidget(twitchChannelEdit, 1);
+
+	twitchConnectButton = new QPushButton(QStringLiteral("Connect Twitch"), twitchGroup);
+	twitchLayout->addWidget(twitchConnectButton);
+	layout->addWidget(twitchGroup);
+
+	twitchErrorLabel = new QLabel(root);
+	twitchErrorLabel->setWordWrap(true);
+	twitchErrorLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	twitchErrorLabel->setVisible(false);
+	layout->addWidget(twitchErrorLabel);
+
+	connect(twitchChannelModeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+		twitchChannelEdit->setVisible(index == 1);
+	});
+	connect(twitchConnectButton, &QPushButton::clicked, this, [this]() {
+		if (!manager) {
+			return;
+		}
+
+		const auto status = manager->ProviderStatus(HimotheeChatPlatform::Twitch);
+		if (status.state == HimotheeChatConnectionState::Connected ||
+		    status.state == HimotheeChatConnectionState::Connecting ||
+		    status.state == HimotheeChatConnectionState::Reconnecting) {
+			manager->DisconnectProvider(HimotheeChatPlatform::Twitch);
+			return;
+		}
+
+		const string channelOverride =
+			twitchChannelModeCombo->currentIndex() == 1 ? twitchChannelEdit->text().trimmed().toStdString() : "";
+		manager->SetChannelOverride(HimotheeChatPlatform::Twitch, channelOverride);
+		manager->ConnectProvider(HimotheeChatPlatform::Twitch);
+	});
 
 	filterTabs = new QTabBar(root);
 	filterTabs->setExpanding(true);
@@ -158,6 +204,7 @@ void HimotheeChatDock::BuildUi()
 void HimotheeChatDock::Refresh()
 {
 	UpdateConnectionSummary();
+	UpdateTwitchControls();
 	UpdateComposerState();
 
 	if (!manager) {
@@ -229,7 +276,13 @@ void HimotheeChatDock::UpdateConnectionSummary()
 	for (const auto &status : manager->ProviderStatuses()) {
 		QString label = QString::fromUtf8(HimotheeChatConnectionStateName(status.state));
 		if (!status.accountName.empty()) {
-			label += QStringLiteral(" (%1)").arg(QString::fromStdString(status.accountName));
+			label += QStringLiteral(" (%1").arg(QString::fromStdString(status.accountName));
+			if (!status.channelName.empty() && status.channelName != status.accountName) {
+				label += QStringLiteral(" → #%1").arg(QString::fromStdString(status.channelName));
+			}
+			label += QStringLiteral(")");
+		} else if (!status.channelName.empty()) {
+			label += QStringLiteral(" (#%1)").arg(QString::fromStdString(status.channelName));
 		}
 
 		switch (status.platform) {
@@ -249,6 +302,45 @@ void HimotheeChatDock::UpdateConnectionSummary()
 
 	connectionLabel->setText(
 		QStringLiteral("Twitch: %1  |  YouTube: %2  |  Kick: %3").arg(twitch, youtube, kick));
+}
+
+void HimotheeChatDock::UpdateTwitchControls()
+{
+	if (!manager) {
+		return;
+	}
+
+	const auto status = manager->ProviderStatus(HimotheeChatPlatform::Twitch);
+	const bool busy = status.state == HimotheeChatConnectionState::Connecting ||
+			  status.state == HimotheeChatConnectionState::Reconnecting;
+	const bool connected = status.state == HimotheeChatConnectionState::Connected;
+
+	if (status.automaticChannel) {
+		if (twitchChannelModeCombo->currentIndex() != 0) {
+			twitchChannelModeCombo->setCurrentIndex(0);
+		}
+	} else {
+		if (twitchChannelModeCombo->currentIndex() != 1) {
+			twitchChannelModeCombo->setCurrentIndex(1);
+		}
+		if (!status.channelName.empty() && twitchChannelEdit->text().isEmpty()) {
+			twitchChannelEdit->setText(QString::fromStdString(status.channelName));
+		}
+	}
+
+	twitchChannelModeCombo->setEnabled(!busy && !connected);
+	twitchChannelEdit->setEnabled(!busy && !connected);
+	twitchChannelEdit->setVisible(twitchChannelModeCombo->currentIndex() == 1);
+	twitchConnectButton->setText(connected || busy ? QStringLiteral("Disconnect Twitch")
+						       : QStringLiteral("Connect Twitch"));
+
+	if (!status.lastError.empty()) {
+		twitchErrorLabel->setText(QStringLiteral("Twitch: %1").arg(QString::fromStdString(status.lastError)));
+		twitchErrorLabel->setVisible(true);
+	} else {
+		twitchErrorLabel->clear();
+		twitchErrorLabel->setVisible(false);
+	}
 }
 
 void HimotheeChatDock::UpdateComposerState()
