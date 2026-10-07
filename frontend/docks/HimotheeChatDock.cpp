@@ -345,12 +345,12 @@ void HimotheeChatDock::UpdateTwitchControls()
 
 void HimotheeChatDock::UpdateComposerState()
 {
-	const bool enabled = manager && manager->AnyConnected();
+	const bool enabled = manager && manager->CanSendMessages();
 	sendTargetCombo->setEnabled(enabled);
 	messageEdit->setEnabled(enabled);
 	sendButton->setEnabled(enabled && !messageEdit->text().trimmed().isEmpty());
 	messageEdit->setPlaceholderText(enabled ? QStringLiteral("Type a message...")
-						    : QStringLiteral("Connect a chat provider to send messages"));
+						    : QStringLiteral("Message sending arrives in Stage 9.5"));
 }
 
 int HimotheeChatDock::CurrentFilterIndex() const
