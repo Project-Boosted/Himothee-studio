@@ -191,13 +191,7 @@ void HimotheeMultistreamDock::BuildUi()
 
 	audioTrackCombo = new QComboBox(editorGroup);
 	for (int track = 1; track <= MAX_AUDIO_MIXES; track++) {
-		const string key = "Track" + to_string(track) + "Name";
-		const char *configuredName = config_get_string(main->Config(), "AdvOut", key.c_str());
-		QString label = QStringLiteral("Track %1").arg(track);
-		if (configuredName && *configuredName) {
-			label += QStringLiteral(" — %1").arg(QString::fromUtf8(configuredName));
-		}
-		audioTrackCombo->addItem(label, track);
+		audioTrackCombo->addItem(QStringLiteral("Track %1").arg(track), track);
 	}
 	form->addRow(QStringLiteral("Audio track"), audioTrackCombo);
 
@@ -303,8 +297,37 @@ void HimotheeMultistreamDock::BuildUi()
 	SetEditorEnabled(false);
 }
 
+void HimotheeMultistreamDock::RefreshAudioTrackLabels()
+{
+	if (!audioTrackCombo || !main) {
+		return;
+	}
+
+	config_t *profileConfig = main->Config();
+	if (!profileConfig) {
+		return;
+	}
+
+	for (int track = 1; track <= MAX_AUDIO_MIXES; track++) {
+		const string key = "Track" + to_string(track) + "Name";
+		const char *configuredName = config_get_string(profileConfig, "AdvOut", key.c_str());
+
+		QString label = QStringLiteral("Track %1").arg(track);
+		if (configuredName && *configuredName) {
+			label += QStringLiteral(" — %1").arg(QString::fromUtf8(configuredName));
+		}
+
+		const int index = audioTrackCombo->findData(track);
+		if (index >= 0) {
+			audioTrackCombo->setItemText(index, label);
+		}
+	}
+}
+
 void HimotheeMultistreamDock::ReloadFromManager()
 {
+	RefreshAudioTrackLabels();
+
 	auto *manager = main->GetHimotheeMultistreamManager();
 	boundManager = manager;
 
