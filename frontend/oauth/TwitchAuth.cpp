@@ -40,6 +40,12 @@ std::string TwitchAuth::ClientId()
 	return clientId;
 }
 
+bool TwitchAuth::RefreshAccessToken()
+{
+	const std::string clientId = ClientId();
+	return !clientId.empty() && GetToken(TWITCH_TOKEN_URL, clientId, TWITCH_SCOPE_VERSION);
+}
+
 TwitchAuth::TwitchAuth(const Def &d) : OAuthStreamKey(d)
 {
 	if (!cef) {
