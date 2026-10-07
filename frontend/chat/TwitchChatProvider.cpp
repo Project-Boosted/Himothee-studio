@@ -364,7 +364,7 @@ void HimotheeTwitchChatProvider::HandleSocketMessage(const QString &message)
 	const QJsonObject metadata = root.value(QStringLiteral("metadata")).toObject();
 	const string envelopeId = metadata.value(QStringLiteral("message_id")).toString().toStdString();
 	if (!envelopeId.empty()) {
-		if (recentEnvelopeIdSet.contains(envelopeId)) {
+		if (recentEnvelopeIdSet.find(envelopeId) != recentEnvelopeIdSet.end()) {
 			return;
 		}
 		RememberEnvelopeId(envelopeId);
