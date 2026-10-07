@@ -32,6 +32,7 @@ public:
 
 	const std::string &AccountName() const noexcept { return name; }
 	const std::string &AccessToken() const noexcept { return token; }
+	bool RefreshAccessToken();
 	static std::string ClientId();
 
 	QTimer uiLoadTimer;
