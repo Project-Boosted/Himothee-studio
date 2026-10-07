@@ -21,6 +21,10 @@ private:
 	HimotheeChatManager *manager = nullptr;
 
 	QLabel *connectionLabel = nullptr;
+	QComboBox *twitchChannelModeCombo = nullptr;
+	QLineEdit *twitchChannelEdit = nullptr;
+	QPushButton *twitchConnectButton = nullptr;
+	QLabel *twitchErrorLabel = nullptr;
 	QTabBar *filterTabs = nullptr;
 	QTreeWidget *messageTree = nullptr;
 	QComboBox *sendTargetCombo = nullptr;
@@ -37,6 +41,7 @@ private:
 	void RebuildTimeline();
 	void UpdateConnectionSummary();
 	void UpdateComposerState();
+	void UpdateTwitchControls();
 
 	int CurrentFilterIndex() const;
 };
