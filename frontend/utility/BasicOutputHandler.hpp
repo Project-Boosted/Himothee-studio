@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility/MultitrackVideoOutput.hpp>
+#include <utility/HimotheeMultistream.hpp>
 #include <utility/WHIPSimulcastEncoders.hpp>
 
 #include <obs.hpp>
@@ -28,6 +29,8 @@ struct BasicOutputHandler {
 	bool replayBufferActive = false;
 	bool virtualCamActive = false;
 	OBSBasic *main;
+
+	std::unique_ptr<HimotheeMultistreamManager> himotheeMultistream;
 
 	std::unique_ptr<MultitrackVideoOutput> multitrackVideo;
 	bool multitrackVideoActive = false;
@@ -96,7 +99,7 @@ struct BasicOutputHandler {
 	inline bool Active() const
 	{
 		return streamingActive || recordingActive || delayActive || replayBufferActive || virtualCamActive ||
-		       multitrackVideoActive;
+		       multitrackVideoActive || (himotheeMultistream && himotheeMultistream->AnyActive());
 	}
 
 protected:
