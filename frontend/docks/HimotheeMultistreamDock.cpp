@@ -2,6 +2,7 @@
 
 #include <widgets/OBSBasic.hpp>
 
+#include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFormLayout>
