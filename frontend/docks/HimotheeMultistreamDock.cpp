@@ -72,6 +72,21 @@ QString HealthText(const HimotheeDestinationStatus &status)
 	return QStringLiteral("Good");
 }
 
+QString FormatDuration(uint64_t seconds)
+{
+	const uint64_t hours = seconds / 3600;
+	const uint64_t minutes = (seconds % 3600) / 60;
+	const uint64_t secs = seconds % 60;
+
+	if (hours > 0) {
+		return QStringLiteral("%1:%2:%3")
+			.arg(hours)
+			.arg(minutes, 2, 10, QLatin1Char('0'))
+			.arg(secs, 2, 10, QLatin1Char('0'));
+	}
+	return QStringLiteral("%1:%2").arg(minutes).arg(secs, 2, 10, QLatin1Char('0'));
+}
+
 QString FormatBytes(uint64_t bytes)
 {
 	static const char *units[] = {"B", "KB", "MB", "GB", "TB"};
@@ -113,17 +128,17 @@ void HimotheeMultistreamDock::BuildUi()
 	layout->addWidget(summaryLabel);
 
 	destinationTree = new QTreeWidget(root);
-	destinationTree->setColumnCount(10);
+	destinationTree->setColumnCount(12);
 	destinationTree->setHeaderLabels(
 		{QStringLiteral("Destination"), QStringLiteral("Platform"), QStringLiteral("Enabled"),
 		 QStringLiteral("Mode"), QStringLiteral("State"), QStringLiteral("Bitrate"),
 		 QStringLiteral("Dropped"), QStringLiteral("Connect"), QStringLiteral("Health"),
-		 QStringLiteral("Data")});
+		 QStringLiteral("Uptime"), QStringLiteral("R/E"), QStringLiteral("Data")});
 	destinationTree->setRootIsDecorated(false);
 	destinationTree->setAlternatingRowColors(true);
 	destinationTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	destinationTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	for (int column = 1; column < 10; column++) {
+	for (int column = 1; column < 12; column++) {
 		destinationTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
 	}
 	layout->addWidget(destinationTree, 1);
@@ -208,6 +223,13 @@ void HimotheeMultistreamDock::BuildUi()
 	passwordEdit = new QLineEdit(editorGroup);
 	passwordEdit->setEchoMode(QLineEdit::Password);
 	form->addRow(QStringLiteral("Password"), passwordEdit);
+
+	reconnectPolicyCombo = new QComboBox(editorGroup);
+	reconnectPolicyCombo->addItems(
+		{QStringLiteral("Inherit OBS"), QStringLiteral("Always reconnect"), QStringLiteral("Never reconnect")});
+	form->addRow(QStringLiteral("Reconnect"), reconnectPolicyCombo);
+	connect(reconnectPolicyCombo, qOverload<int>(&QComboBox::currentIndexChanged), this,
+		[this](int) { UpdateReconnectControls(); });
 
 	maxRetriesSpin = new QSpinBox(editorGroup);
 	maxRetriesSpin->setRange(-1, 1000);
