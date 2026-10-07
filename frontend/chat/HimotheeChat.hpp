@@ -52,6 +52,8 @@ struct HimotheeChatProviderStatus {
 	HimotheeChatPlatform platform = HimotheeChatPlatform::System;
 	HimotheeChatConnectionState state = HimotheeChatConnectionState::Disconnected;
 	std::string accountName;
+	std::string channelName;
+	bool automaticChannel = true;
 	std::string lastError;
 };
 
@@ -62,6 +64,9 @@ public:
 	virtual HimotheeChatPlatform Platform() const noexcept = 0;
 	virtual HimotheeChatConnectionState State() const noexcept = 0;
 	virtual std::string AccountName() const = 0;
+	virtual std::string ChannelName() const { return {}; }
+	virtual bool AutomaticChannel() const { return true; }
+	virtual void SetChannelOverride(const std::string &) {}
 
 	virtual bool Connect() = 0;
 	virtual void Disconnect() = 0;
@@ -79,6 +84,10 @@ public:
 	void RegisterProvider(std::unique_ptr<HimotheeChatProvider> provider);
 	void ConnectAll();
 	void DisconnectAll();
+	bool ConnectProvider(HimotheeChatPlatform platform);
+	void DisconnectProvider(HimotheeChatPlatform platform);
+	void SetChannelOverride(HimotheeChatPlatform platform, const std::string &channel);
+	HimotheeChatProviderStatus ProviderStatus(HimotheeChatPlatform platform) const;
 
 	bool SendMessage(HimotheeChatPlatform target, const std::string &message);
 
