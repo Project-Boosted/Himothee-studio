@@ -6,6 +6,8 @@
 #include <util/config-file.h>
 
 #include <algorithm>
+#include <cctype>
+#include <string_view>
 #include <filesystem>
 #include <utility>
 
@@ -14,6 +16,40 @@ using namespace std;
 namespace {
 
 constexpr const char *kMultistreamFileName = "multistream.json";
+
+bool CodecListContains(const char *supportedCodecs, const char *codec)
+{
+	if (!codec || !*codec) {
+		return false;
+	}
+	if (!supportedCodecs || !*supportedCodecs) {
+		return true;
+	}
+
+	auto normalize = [](string value) {
+		transform(value.begin(), value.end(), value.begin(),
+			  [](unsigned char ch) { return static_cast<char>(tolower(ch)); });
+		return value;
+	};
+
+	const string wanted = normalize(codec);
+	string_view remaining{supportedCodecs};
+
+	while (!remaining.empty()) {
+		const size_t separator = remaining.find(';');
+		const string token = normalize(string(remaining.substr(0, separator)));
+		if (token == wanted) {
+			return true;
+		}
+
+		if (separator == string_view::npos) {
+			break;
+		}
+		remaining.remove_prefix(separator + 1);
+	}
+
+	return false;
+}
 
 const char *StateName(HimotheeDestinationState state)
 {
@@ -270,6 +306,29 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		return false;
 	}
 
+	const char *videoCodec = obs_encoder_get_codec(videoEncoder);
+	const char *audioCodec = obs_encoder_get_codec(audioEncoder);
+	const char *supportedVideoCodecs = obs_output_get_supported_video_codecs(runtime->output);
+	const char *supportedAudioCodecs = obs_output_get_supported_audio_codecs(runtime->output);
+
+	if (!CodecListContains(supportedVideoCodecs, videoCodec)) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->lastError = string("Shared video codec '") + (videoCodec ? videoCodec : "unknown") +
+				     "' is not supported by this destination output.";
+		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared video codec '%s'.",
+		     config.name.c_str(), videoCodec ? videoCodec : "unknown");
+		return false;
+	}
+
+	if (!CodecListContains(supportedAudioCodecs, audioCodec)) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->lastError = string("Shared audio codec '") + (audioCodec ? audioCodec : "unknown") +
+				     "' is not supported by this destination output.";
+		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared audio codec '%s'.",
+		     config.name.c_str(), audioCodec ? audioCodec : "unknown");
+		return false;
+	}
+
 	obs_output_set_video_encoder(runtime->output, videoEncoder);
 	obs_output_set_audio_encoder(runtime->output, audioEncoder, 0);
 	obs_output_set_service(runtime->output, runtime->service);
@@ -487,6 +546,15 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 			status.totalBytes = obs_output_get_total_bytes(runtime->output);
 			status.droppedFrames = obs_output_get_frames_dropped(runtime->output);
 			status.totalFrames = obs_output_get_total_frames(runtime->output);
+			status.connectTimeMs = obs_output_get_connect_time_ms(runtime->output);
+			status.congestion = obs_output_get_congestion(runtime->output);
+
+			obs_encoder_t *videoEncoder = obs_output_get_video_encoder(runtime->output);
+			obs_encoder_t *audioEncoder = obs_output_get_audio_encoder(runtime->output, 0);
+			const char *videoCodec = videoEncoder ? obs_encoder_get_codec(videoEncoder) : nullptr;
+			const char *audioCodec = audioEncoder ? obs_encoder_get_codec(audioEncoder) : nullptr;
+			status.videoCodec = videoCodec ? videoCodec : "";
+			status.audioCodec = audioCodec ? audioCodec : "";
 		}
 
 		result.emplace_back(std::move(status));
