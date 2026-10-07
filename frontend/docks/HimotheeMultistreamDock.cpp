@@ -5,6 +5,7 @@
 #include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTime>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -51,6 +52,26 @@ QString StateText(HimotheeDestinationState state)
 	return QStringLiteral("Unknown");
 }
 
+QString HealthText(const HimotheeDestinationStatus &status)
+{
+	if (status.state == HimotheeDestinationState::Error) {
+		return QStringLiteral("Error");
+	}
+	if (status.state == HimotheeDestinationState::Reconnecting) {
+		return QStringLiteral("Reconnect");
+	}
+	if (status.state != HimotheeDestinationState::Active) {
+		return QStringLiteral("-");
+	}
+	if (status.congestion >= 0.65f) {
+		return QStringLiteral("Congested");
+	}
+	if (status.congestion >= 0.25f) {
+		return QStringLiteral("Busy");
+	}
+	return QStringLiteral("Good");
+}
+
 QString FormatBytes(uint64_t bytes)
 {
 	static const char *units[] = {"B", "KB", "MB", "GB", "TB"};
@@ -92,19 +113,19 @@ void HimotheeMultistreamDock::BuildUi()
 	layout->addWidget(summaryLabel);
 
 	destinationTree = new QTreeWidget(root);
-	destinationTree->setColumnCount(6);
+	destinationTree->setColumnCount(10);
 	destinationTree->setHeaderLabels(
 		{QStringLiteral("Destination"), QStringLiteral("Platform"), QStringLiteral("Enabled"),
-		 QStringLiteral("State"), QStringLiteral("Dropped"), QStringLiteral("Data")});
+		 QStringLiteral("Mode"), QStringLiteral("State"), QStringLiteral("Bitrate"),
+		 QStringLiteral("Dropped"), QStringLiteral("Connect"), QStringLiteral("Health"),
+		 QStringLiteral("Data")});
 	destinationTree->setRootIsDecorated(false);
 	destinationTree->setAlternatingRowColors(true);
 	destinationTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	destinationTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	destinationTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-	destinationTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-	destinationTree->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-	destinationTree->header()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-	destinationTree->header()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+	for (int column = 1; column < 10; column++) {
+		destinationTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
+	}
 	layout->addWidget(destinationTree, 1);
 
 	connect(destinationTree, &QTreeWidget::itemSelectionChanged, this, [this]() {
@@ -255,9 +276,13 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(0, QString::fromStdString(config.name));
 		item->setText(1, QString::fromStdString(config.platform));
 		item->setText(2, config.enabled ? QStringLiteral("On") : QStringLiteral("Off"));
-		item->setText(3, config.enabled ? QStringLiteral("Ready") : QStringLiteral("Disabled"));
-		item->setText(4, QStringLiteral("0"));
-		item->setText(5, QStringLiteral("0 B"));
+		item->setText(3, QStringLiteral("Shared"));
+		item->setText(4, config.enabled ? QStringLiteral("Ready") : QStringLiteral("Disabled"));
+		item->setText(5, QStringLiteral("0 kbps"));
+		item->setText(6, QStringLiteral("0"));
+		item->setText(7, QStringLiteral("-"));
+		item->setText(8, QStringLiteral("-"));
+		item->setText(9, QStringLiteral("0 B"));
 	}
 }
 
@@ -488,7 +513,10 @@ void HimotheeMultistreamDock::RefreshStatus()
 		statusById.emplace(status.id, std::move(status));
 	}
 
+	const uint64_t nowMs = static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
 	int activeCount = 0;
+	int errorCount = 0;
+	int reconnectingCount = 0;
 	for (int row = 0; row < destinationTree->topLevelItemCount(); row++) {
 		auto *item = destinationTree->topLevelItem(row);
 		const string id = item->data(0, Qt::UserRole + 1).toString().toStdString();
@@ -498,32 +526,72 @@ void HimotheeMultistreamDock::RefreshStatus()
 			const int index = item->data(0, Qt::UserRole).toInt();
 			if (index >= 0 && index < static_cast<int>(workingDestinations.size()) &&
 			    !workingDestinations[static_cast<size_t>(index)].enabled) {
-				item->setText(3, QStringLiteral("Disabled"));
+				item->setText(4, QStringLiteral("Disabled"));
 			} else {
-				item->setText(3, primaryActive ? QStringLiteral("Waiting") : QStringLiteral("Ready"));
+				item->setText(4, primaryActive ? QStringLiteral("Waiting") : QStringLiteral("Ready"));
 			}
-			item->setText(4, QStringLiteral("0"));
-			item->setText(5, QStringLiteral("0 B"));
-			item->setToolTip(3, QString());
+			item->setText(5, QStringLiteral("0 kbps"));
+			item->setText(6, QStringLiteral("0"));
+			item->setText(7, QStringLiteral("-"));
+			item->setText(8, QStringLiteral("-"));
+			item->setText(9, QStringLiteral("0 B"));
+			item->setToolTip(4, QString());
+			lastBytesById.erase(id);
+			lastSampleMsById.erase(id);
 			continue;
 		}
 
 		const auto &status = it->second;
-		item->setText(3, StateText(status.state));
-		item->setText(4, QString::number(status.droppedFrames));
-		item->setText(5, FormatBytes(status.totalBytes));
-		item->setToolTip(3, QString::fromStdString(status.lastError));
+		double bitrateKbps = 0.0;
+		auto bytesIt = lastBytesById.find(id);
+		auto timeIt = lastSampleMsById.find(id);
+		if (bytesIt != lastBytesById.end() && timeIt != lastSampleMsById.end() && nowMs > timeIt->second &&
+		    status.totalBytes >= bytesIt->second) {
+			const uint64_t elapsedMs = nowMs - timeIt->second;
+			const uint64_t byteDelta = status.totalBytes - bytesIt->second;
+			bitrateKbps = (static_cast<double>(byteDelta) * 8.0) / static_cast<double>(elapsedMs);
+		}
+		lastBytesById[id] = status.totalBytes;
+		lastSampleMsById[id] = nowMs;
+
+		item->setText(4, StateText(status.state));
+		item->setText(5, QStringLiteral("%1 kbps").arg(bitrateKbps, 0, 'f', 0));
+		item->setText(6, QString::number(status.droppedFrames));
+		item->setText(7, status.connectTimeMs >= 0 ? QStringLiteral("%1 ms").arg(status.connectTimeMs)
+						       : QStringLiteral("-"));
+		item->setText(8, HealthText(status));
+		item->setText(9, FormatBytes(status.totalBytes));
+
+		QString tooltip = QStringLiteral("Mode: Shared Encoder");
+		if (!status.videoCodec.empty() || !status.audioCodec.empty()) {
+			tooltip += QStringLiteral("\nCodecs: %1 / %2")
+					   .arg(QString::fromStdString(status.videoCodec),
+						QString::fromStdString(status.audioCodec));
+		}
+		if (!status.lastError.empty()) {
+			tooltip += QStringLiteral("\nLast error: %1").arg(QString::fromStdString(status.lastError));
+		}
+		item->setToolTip(4, tooltip);
+
 		if (status.state == HimotheeDestinationState::Active ||
 		    status.state == HimotheeDestinationState::Reconnecting) {
 			activeCount++;
 		}
+		if (status.state == HimotheeDestinationState::Error) {
+			errorCount++;
+		}
+		if (status.state == HimotheeDestinationState::Reconnecting) {
+			reconnectingCount++;
+		}
 	}
 
 	summaryLabel->setText(
-		QStringLiteral("Primary stream: %1  |  Secondary live: %2  |  Enabled: %3")
+		QStringLiteral("Mode: Shared Encoder  |  Primary: %1  |  Secondary live: %2/%3  |  Reconnecting: %4  |  Errors: %5")
 			.arg(primaryActive ? QStringLiteral("Live") : QStringLiteral("Stopped"))
 			.arg(activeCount)
-			.arg(manager->EnabledCount()));
+			.arg(manager->EnabledCount())
+			.arg(reconnectingCount)
+			.arg(errorCount));
 
 	const bool selected = currentIndex >= 0 && currentIndex < static_cast<int>(workingDestinations.size());
 	bool selectedActive = false;
