@@ -319,9 +319,9 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 		const string videoName = "himothee_independent_video_" + to_string(index + 1);
 		const string audioName = "himothee_independent_audio_" + to_string(index + 1);
 
-		runtime->independentVideoEncoder = OBSVideoEncoderAutoRelease{
+		runtime->independentVideoEncoder = OBSEncoderAutoRelease{
 			obs_video_encoder_create(videoEncoderId, videoName.c_str(), videoSettings, nullptr)};
-		runtime->independentAudioEncoder = OBSAudioEncoderAutoRelease{
+		runtime->independentAudioEncoder = OBSEncoderAutoRelease{
 			obs_audio_encoder_create(audioEncoderId, audioName.c_str(), audioSettings,
 						 obs_encoder_get_mixer_index(primaryAudioEncoder), nullptr)};
 
