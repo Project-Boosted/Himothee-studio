@@ -250,6 +250,18 @@ HimotheeChatProviderStatus HimotheeChatManager::ProviderStatus(HimotheeChatPlatf
 	return it != providerStatuses.end() ? *it : HimotheeChatProviderStatus{platform};
 }
 
+bool HimotheeChatManager::CanSendMessages(HimotheeChatPlatform target) const
+{
+	lock_guard lock(mutex);
+	return any_of(providers.begin(), providers.end(), [&](const auto &provider) {
+		if (!provider || provider->State() != HimotheeChatConnectionState::Connected ||
+		    !provider->CanSendMessages()) {
+			return false;
+		}
+		return target == HimotheeChatPlatform::All || provider->Platform() == target;
+	});
+}
+
 bool HimotheeChatManager::SendMessage(HimotheeChatPlatform target, const string &message)
 {
 	if (message.empty()) {
