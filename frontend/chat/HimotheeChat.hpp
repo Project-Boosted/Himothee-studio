@@ -67,6 +67,7 @@ public:
 	virtual std::string ChannelName() const { return {}; }
 	virtual bool AutomaticChannel() const { return true; }
 	virtual void SetChannelOverride(const std::string &) {}
+	virtual bool CanSendMessages() const { return false; }
 
 	virtual bool Connect() = 0;
 	virtual void Disconnect() = 0;
@@ -88,6 +89,7 @@ public:
 	void DisconnectProvider(HimotheeChatPlatform platform);
 	void SetChannelOverride(HimotheeChatPlatform platform, const std::string &channel);
 	HimotheeChatProviderStatus ProviderStatus(HimotheeChatPlatform platform) const;
+	bool CanSendMessages(HimotheeChatPlatform target = HimotheeChatPlatform::All) const;
 
 	bool SendMessage(HimotheeChatPlatform target, const std::string &message);
 
