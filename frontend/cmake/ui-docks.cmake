@@ -3,6 +3,8 @@ target_sources(
   PRIVATE
     chat/HimotheeChat.cpp
     chat/HimotheeChat.hpp
+    chat/TwitchChatProvider.cpp
+    chat/TwitchChatProvider.hpp
     docks/OBSDock.cpp
     docks/OBSDock.hpp
     docks/HimotheeChatDock.cpp
