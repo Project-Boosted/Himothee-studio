@@ -43,6 +43,7 @@ private:
 	QSpinBox *audioBitrateSpin = nullptr;
 	QSpinBox *outputWidthSpin = nullptr;
 	QSpinBox *outputHeightSpin = nullptr;
+	QComboBox *reconnectPolicyCombo = nullptr;
 	QLineEdit *serverEdit = nullptr;
 	QLineEdit *keyEdit = nullptr;
 	QCheckBox *showSecretsCheck = nullptr;
@@ -69,6 +70,7 @@ private:
 	void StoreEditor();
 	void SetEditorEnabled(bool enabled);
 	void UpdateEncoderControls();
+	void UpdateReconnectControls();
 	void AddDestination();
 	void RemoveSelectedDestination();
 	bool SaveChanges();
