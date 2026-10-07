@@ -53,9 +53,12 @@ public:
 
 	bool Load();
 	bool Save() const;
+	bool ReplaceDestinations(std::vector<HimotheeDestinationConfig> newDestinations);
 
 	bool PrepareSharedOutputs(obs_output_t *primaryOutput);
 	size_t StartPrepared();
+	bool StartDestination(const std::string &id);
+	void StopDestination(const std::string &id, bool force = false);
 	void StopAll(bool force = false);
 	void ResetPrepared();
 
