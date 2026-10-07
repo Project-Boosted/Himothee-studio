@@ -35,6 +35,7 @@ private:
 
 	QTreeWidget *destinationTree = nullptr;
 	QLabel *summaryLabel = nullptr;
+	QLabel *errorLabel = nullptr;
 	QComboBox *platformCombo = nullptr;
 	QLineEdit *nameEdit = nullptr;
 	QCheckBox *enabledCheck = nullptr;
