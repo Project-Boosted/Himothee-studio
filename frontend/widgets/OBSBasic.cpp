@@ -31,6 +31,7 @@
 #include <docks/YouTubeAppDock.hpp>
 #endif
 #include <chat/HimotheeChat.hpp>
+#include <chat/TwitchChatProvider.hpp>
 #include <docks/HimotheeChatDock.hpp>
 #include <docks/HimotheeMultistreamDock.hpp>
 #include <dialogs/NameDialog.hpp>
@@ -236,6 +237,8 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 {
 	collections = {};
 	himotheeChatManager = make_unique<HimotheeChatManager>();
+	himotheeChatManager->RegisterProvider(
+		make_unique<HimotheeTwitchChatProvider>(himotheeChatManager.get()));
 
 	setAttribute(Qt::WA_NativeWindow);
 
