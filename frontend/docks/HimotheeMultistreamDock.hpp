@@ -38,6 +38,11 @@ private:
 	QComboBox *platformCombo = nullptr;
 	QLineEdit *nameEdit = nullptr;
 	QCheckBox *enabledCheck = nullptr;
+	QComboBox *encoderModeCombo = nullptr;
+	QSpinBox *videoBitrateSpin = nullptr;
+	QSpinBox *audioBitrateSpin = nullptr;
+	QSpinBox *outputWidthSpin = nullptr;
+	QSpinBox *outputHeightSpin = nullptr;
 	QLineEdit *serverEdit = nullptr;
 	QLineEdit *keyEdit = nullptr;
 	QCheckBox *showSecretsCheck = nullptr;
@@ -63,6 +68,7 @@ private:
 	void LoadEditor(int index);
 	void StoreEditor();
 	void SetEditorEnabled(bool enabled);
+	void UpdateEncoderControls();
 	void AddDestination();
 	void RemoveSelectedDestination();
 	bool SaveChanges();
