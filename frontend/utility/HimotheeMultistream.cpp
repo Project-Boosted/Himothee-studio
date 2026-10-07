@@ -738,8 +738,6 @@ void HimotheeMultistreamManager::OnOutputReconnect(void *data, calldata_t *)
 	runtime->reconnectCount++;
 	blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' is reconnecting (attempt %u).",
 	     runtime->config.name.c_str(), runtime->reconnectCount);
-	return;
-
 }
 
 void HimotheeMultistreamManager::OnOutputReconnectSuccess(void *data, calldata_t *)
