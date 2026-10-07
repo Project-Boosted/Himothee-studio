@@ -18,6 +18,85 @@ namespace {
 
 constexpr const char *kMultistreamFileName = "multistream.json";
 
+bool PlatformEquals(const string &platform, const char *name)
+{
+	return name && astrcmpi(platform.c_str(), name) == 0;
+}
+
+bool PlatformUsesStandardH264Rtmp(const string &platform)
+{
+	return PlatformEquals(platform, "Kick") || PlatformEquals(platform, "Twitch");
+}
+
+const char *FindVideoEncoderForCodec(const char *primaryEncoderId, const char *wantedCodec)
+{
+	if (!wantedCodec || !*wantedCodec) {
+		return nullptr;
+	}
+
+	if (primaryEncoderId) {
+		const char *currentCodec = obs_get_encoder_codec(primaryEncoderId);
+		if (currentCodec && astrcmpi(currentCodec, wantedCodec) == 0) {
+			return primaryEncoderId;
+		}
+	}
+
+	const string primaryId = primaryEncoderId ? primaryEncoderId : "";
+	const auto vendorScore = [&](const char *candidateId) {
+		if (!candidateId) {
+			return 0;
+		}
+		const string candidate = candidateId;
+		int score = 0;
+		for (const char *vendor : {"nvenc", "qsv", "amf", "vaapi", "apple", "x264"}) {
+			if (primaryId.find(vendor) != string::npos && candidate.find(vendor) != string::npos) {
+				score += 100;
+			}
+		}
+		if (candidate.find("_tex") != string::npos && primaryId.find("_tex") != string::npos) {
+			score += 10;
+		}
+		return score;
+	};
+
+	const char *best = nullptr;
+	int bestScore = -1;
+	const char *candidateId = nullptr;
+	for (size_t i = 0; obs_enum_encoder_types(i, &candidateId); i++) {
+		if (obs_get_encoder_type(candidateId) != OBS_ENCODER_VIDEO) {
+			continue;
+		}
+		const char *codec = obs_get_encoder_codec(candidateId);
+		if (!codec || astrcmpi(codec, wantedCodec) != 0) {
+			continue;
+		}
+
+		const int score = vendorScore(candidateId);
+		if (score > bestScore) {
+			best = candidateId;
+			bestScore = score;
+		}
+	}
+
+	return best;
+}
+
+bool MatchesPrimaryStreamKey(obs_output_t *primaryOutput, const HimotheeDestinationConfig &config)
+{
+	if (!primaryOutput || config.key.empty()) {
+		return false;
+	}
+
+	obs_service_t *primaryService = obs_output_get_service(primaryOutput);
+	if (!primaryService) {
+		return false;
+	}
+
+	OBSDataAutoRelease settings = obs_service_get_settings(primaryService);
+	const char *primaryKey = settings ? obs_data_get_string(settings, "key") : nullptr;
+	return primaryKey && *primaryKey && config.key == primaryKey;
+}
+
 bool CodecListContains(const char *supportedCodecs, const char *codec)
 {
 	if (!codec || !*codec) {
@@ -334,17 +413,59 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 	const size_t selectedMixerIndex = static_cast<size_t>(config.audioTrack - 1);
 
 	if (config.encoderMode == HimotheeEncoderMode::Independent) {
-		const char *videoEncoderId = obs_encoder_get_id(primaryVideoEncoder);
-		if (!videoEncoderId) {
+		const char *primaryVideoEncoderId = obs_encoder_get_id(primaryVideoEncoder);
+		if (!primaryVideoEncoderId) {
 			runtime->state = HimotheeDestinationState::Error;
 			runtime->lastError = "Could not determine the primary video encoder type.";
 			runtimes.emplace_back(std::move(runtime));
 			return false;
 		}
 
+		const bool standardH264Platform = PlatformUsesStandardH264Rtmp(config.platform);
+		const char *videoEncoderId =
+			standardH264Platform ? FindVideoEncoderForCodec(primaryVideoEncoderId, "h264") : primaryVideoEncoderId;
+		if (!videoEncoderId) {
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError =
+				"Could not find a compatible H.264 video encoder for this platform.";
+			blog(LOG_WARNING, "[Himothee Multistream] No H.264 encoder is available for '%s'.",
+			     config.name.c_str());
+			runtimes.emplace_back(std::move(runtime));
+			return false;
+		}
+
 		OBSDataAutoRelease videoSettings = obs_encoder_get_settings(primaryVideoEncoder);
-		if (config.videoBitrateKbps > 0) {
-			obs_data_set_int(videoSettings, "bitrate", config.videoBitrateKbps);
+
+		int targetBitrate = config.videoBitrateKbps;
+		uint32_t targetWidth = config.outputWidth;
+		uint32_t targetHeight = config.outputHeight;
+
+		if (PlatformEquals(config.platform, "Kick")) {
+			if (targetBitrate <= 0 || targetBitrate > 8000) {
+				targetBitrate = 8000;
+			}
+			if (targetWidth == 0 || targetHeight == 0 || targetWidth > 1920 || targetHeight > 1080) {
+				targetWidth = 1920;
+				targetHeight = 1080;
+			}
+			obs_data_set_int(videoSettings, "keyint_sec", 2);
+			obs_data_set_string(videoSettings, "rate_control", "CBR");
+			obs_data_set_string(videoSettings, "profile", "main");
+		} else if (PlatformEquals(config.platform, "Twitch")) {
+			if (targetBitrate <= 0) {
+				targetBitrate = 6000;
+			}
+			if (targetWidth == 0 || targetHeight == 0 || targetWidth > 1920 || targetHeight > 1080) {
+				targetWidth = 1920;
+				targetHeight = 1080;
+			}
+			obs_data_set_int(videoSettings, "keyint_sec", 2);
+			obs_data_set_string(videoSettings, "rate_control", "CBR");
+			obs_data_set_string(videoSettings, "profile", "high");
+		}
+
+		if (targetBitrate > 0) {
+			obs_data_set_int(videoSettings, "bitrate", targetBitrate);
 		}
 
 		const string videoName = "himothee_independent_video_" + to_string(index + 1);
@@ -362,8 +483,14 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 
 		obs_encoder_set_video(runtime->independentVideoEncoder, obs_get_video());
 
-		if (config.outputWidth > 0 && config.outputHeight > 0) {
-			obs_encoder_set_scaled_size(runtime->independentVideoEncoder, config.outputWidth, config.outputHeight);
+		if (targetWidth > 0 && targetHeight > 0) {
+			obs_encoder_set_scaled_size(runtime->independentVideoEncoder, targetWidth, targetHeight);
+		}
+
+		if (standardH264Platform) {
+			blog(LOG_INFO,
+			     "[Himothee Multistream] Applied %s RTMP-safe video settings to '%s': H.264, %d kbps, %ux%u.",
+			     config.platform.c_str(), config.name.c_str(), targetBitrate, targetWidth, targetHeight);
 		}
 
 		videoEncoder = runtime->independentVideoEncoder;
@@ -401,6 +528,18 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 
 		obs_encoder_set_audio(runtime->destinationAudioEncoder, obs_get_audio());
 		audioEncoder = runtime->destinationAudioEncoder;
+	}
+
+	if (MatchesPrimaryStreamKey(primaryOutput, config)) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->errorCount = 1;
+		runtime->lastError =
+			"This destination uses the same stream key as the primary output. Remove/disable the duplicate "
+			"destination or use a different channel/key.";
+		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' duplicates the primary stream key.",
+		     config.name.c_str());
+		runtimes.emplace_back(std::move(runtime));
+		return false;
 	}
 
 	OBSDataAutoRelease serviceSettings = obs_data_create();
