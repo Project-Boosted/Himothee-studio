@@ -191,13 +191,7 @@ void HimotheeMultistreamDock::BuildUi()
 
 	audioTrackCombo = new QComboBox(editorGroup);
 	for (int track = 1; track <= MAX_AUDIO_MIXES; track++) {
-		const string key = "Track" + to_string(track) + "Name";
-		const char *configuredName = config_get_string(main->Config(), "AdvOut", key.c_str());
-		QString label = QStringLiteral("Track %1").arg(track);
-		if (configuredName && *configuredName) {
-			label += QStringLiteral(" — %1").arg(QString::fromUtf8(configuredName));
-		}
-		audioTrackCombo->addItem(label, track);
+		audioTrackCombo->addItem(QStringLiteral("Track %1").arg(track), track);
 	}
 	form->addRow(QStringLiteral("Audio track"), audioTrackCombo);
 
@@ -326,6 +320,40 @@ void HimotheeMultistreamDock::ReloadFromManager()
 
 	if (!workingDestinations.empty()) {
 		destinationTree->setCurrentItem(destinationTree->topLevelItem(0));
+	}
+}
+
+void HimotheeMultistreamDock::RefreshAudioTrackLabels()
+{
+	if (!main || !audioTrackCombo) {
+		return;
+	}
+
+	config_t *profileConfig = main->Config();
+	if (!profileConfig) {
+		return;
+	}
+
+	const int selectedTrack = audioTrackCombo->currentData().toInt();
+
+	for (int index = 0; index < audioTrackCombo->count(); index++) {
+		const int track = audioTrackCombo->itemData(index).toInt();
+		const string key = "Track" + to_string(track) + "Name";
+		const char *configuredName = config_get_string(profileConfig, "AdvOut", key.c_str());
+
+		QString label = QStringLiteral("Track %1").arg(track);
+		if (configuredName && *configuredName) {
+			label += QStringLiteral(" — %1").arg(QString::fromUtf8(configuredName));
+		}
+
+		if (audioTrackCombo->itemText(index) != label) {
+			audioTrackCombo->setItemText(index, label);
+		}
+	}
+
+	const int selectedIndex = audioTrackCombo->findData(selectedTrack);
+	if (selectedIndex >= 0 && selectedIndex != audioTrackCombo->currentIndex()) {
+		audioTrackCombo->setCurrentIndex(selectedIndex);
 	}
 }
 
@@ -655,6 +683,8 @@ string HimotheeMultistreamDock::MakeDestinationId() const
 
 void HimotheeMultistreamDock::RefreshStatus()
 {
+	RefreshAudioTrackLabels();
+
 	auto *manager = main->GetHimotheeMultistreamManager();
 	if (manager != boundManager) {
 		ReloadFromManager();
