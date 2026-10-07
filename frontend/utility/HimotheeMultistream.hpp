@@ -39,6 +39,7 @@ struct HimotheeDestinationConfig {
 	HimotheeEncoderMode encoderMode = HimotheeEncoderMode::Shared;
 	int videoBitrateKbps = 0;
 	int audioBitrateKbps = 0;
+	uint32_t audioTrack = 1;
 	uint32_t outputWidth = 0;
 	uint32_t outputHeight = 0;
 	HimotheeReconnectPolicy reconnectPolicy = HimotheeReconnectPolicy::Inherit;
@@ -69,6 +70,8 @@ struct HimotheeDestinationStatus {
 	uint32_t errorCount = 0;
 	uint64_t uptimeSeconds = 0;
 	uint64_t stateSeconds = 0;
+	uint32_t audioTrack = 1;
+	bool dedicatedAudioEncoder = false;
 	std::string videoCodec;
 	std::string audioCodec;
 };
