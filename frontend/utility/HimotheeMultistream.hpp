@@ -23,6 +23,7 @@ enum class HimotheeDestinationState {
 struct HimotheeDestinationConfig {
 	std::string id;
 	std::string name;
+	std::string platform = "Custom RTMP";
 	bool enabled = true;
 
 	std::string server;
