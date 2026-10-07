@@ -175,6 +175,35 @@ bool HimotheeMultistreamManager::Save() const
 	return obs_data_save_json_safe(root, path.u8string().c_str(), "tmp", "bak");
 }
 
+bool HimotheeMultistreamManager::ReplaceDestinations(vector<HimotheeDestinationConfig> newDestinations)
+{
+	if (AnyActive()) {
+		blog(LOG_WARNING, "[Himothee Multistream] Destination settings cannot be replaced while streaming.");
+		return false;
+	}
+
+	for (size_t i = 0; i < newDestinations.size(); i++) {
+		auto &config = newDestinations[i];
+		if (config.id.empty()) {
+			config.id = "destination-" + to_string(i + 1);
+		}
+		if (config.name.empty()) {
+			config.name = "Destination " + to_string(i + 1);
+		}
+
+		for (size_t j = 0; j < i; j++) {
+			if (newDestinations[j].id == config.id) {
+				config.id += "-" + to_string(i + 1);
+				break;
+			}
+		}
+	}
+
+	runtimes.clear();
+	destinations = std::move(newDestinations);
+	return Save();
+}
+
 bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationConfig &config, size_t index,
 						    obs_output_t *primaryOutput)
 {
@@ -326,23 +355,10 @@ size_t HimotheeMultistreamManager::StartPrepared()
 {
 	size_t started = 0;
 
-	for (auto &runtime : runtimes) {
-		if (!runtime->output || runtime->state != HimotheeDestinationState::Prepared) {
-			continue;
-		}
-
-		runtime->state = HimotheeDestinationState::Starting;
-		if (obs_output_start(runtime->output)) {
+	for (const auto &runtime : runtimes) {
+		if (runtime->state == HimotheeDestinationState::Prepared && StartDestination(runtime->config.id)) {
 			started++;
-			continue;
 		}
-
-		const char *error = obs_output_get_last_error(runtime->output);
-		runtime->lastError = error ? error : "Output failed to start.";
-		runtime->state = HimotheeDestinationState::Error;
-
-		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' failed to start: %s",
-		     runtime->config.name.c_str(), runtime->lastError.c_str());
 	}
 
 	if (started > 0) {
@@ -350,6 +366,62 @@ size_t HimotheeMultistreamManager::StartPrepared()
 	}
 
 	return started;
+}
+
+bool HimotheeMultistreamManager::StartDestination(const string &id)
+{
+	auto it = find_if(runtimes.begin(), runtimes.end(), [&](const auto &runtime) {
+		return runtime->config.id == id;
+	});
+	if (it == runtimes.end()) {
+		return false;
+	}
+
+	auto &runtime = *it;
+	if (!runtime->output || !runtime->config.enabled) {
+		return false;
+	}
+	if (obs_output_active(runtime->output)) {
+		return true;
+	}
+	if (runtime->state == HimotheeDestinationState::Stopping) {
+		return false;
+	}
+
+	runtime->state = HimotheeDestinationState::Starting;
+	if (obs_output_start(runtime->output)) {
+		return true;
+	}
+
+	const char *error = obs_output_get_last_error(runtime->output);
+	runtime->lastError = error ? error : "Output failed to start.";
+	runtime->state = HimotheeDestinationState::Error;
+
+	blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' failed to start: %s",
+	     runtime->config.name.c_str(), runtime->lastError.c_str());
+	return false;
+}
+
+void HimotheeMultistreamManager::StopDestination(const string &id, bool force)
+{
+	auto it = find_if(runtimes.begin(), runtimes.end(), [&](const auto &runtime) {
+		return runtime->config.id == id;
+	});
+	if (it == runtimes.end()) {
+		return;
+	}
+
+	auto &runtime = *it;
+	if (!runtime->output || !obs_output_active(runtime->output)) {
+		return;
+	}
+
+	runtime->state = HimotheeDestinationState::Stopping;
+	if (force) {
+		obs_output_force_stop(runtime->output);
+	} else {
+		obs_output_stop(runtime->output);
+	}
 }
 
 void HimotheeMultistreamManager::StopAll(bool force)
