@@ -338,7 +338,9 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(6, QStringLiteral("0"));
 		item->setText(7, QStringLiteral("-"));
 		item->setText(8, QStringLiteral("-"));
-		item->setText(9, QStringLiteral("0 B"));
+		item->setText(9, QStringLiteral("0:00"));
+		item->setText(10, QStringLiteral("0/0"));
+		item->setText(11, QStringLiteral("0 B"));
 	}
 }
 
@@ -364,6 +366,17 @@ void HimotheeMultistreamDock::LoadEditor(int index)
 	audioBitrateSpin->setValue(config.audioBitrateKbps);
 	outputWidthSpin->setValue(static_cast<int>(config.outputWidth));
 	outputHeightSpin->setValue(static_cast<int>(config.outputHeight));
+	switch (config.reconnectPolicy) {
+	case HimotheeReconnectPolicy::Enabled:
+		reconnectPolicyCombo->setCurrentIndex(1);
+		break;
+	case HimotheeReconnectPolicy::Disabled:
+		reconnectPolicyCombo->setCurrentIndex(2);
+		break;
+	default:
+		reconnectPolicyCombo->setCurrentIndex(0);
+		break;
+	}
 	serverEdit->setText(QString::fromStdString(config.server));
 	keyEdit->setText(QString::fromStdString(config.key));
 	useAuthCheck->setChecked(config.useAuth);
@@ -392,6 +405,17 @@ void HimotheeMultistreamDock::StoreEditor()
 	config.audioBitrateKbps = audioBitrateSpin->value();
 	config.outputWidth = static_cast<uint32_t>(outputWidthSpin->value());
 	config.outputHeight = static_cast<uint32_t>(outputHeightSpin->value());
+	switch (reconnectPolicyCombo->currentIndex()) {
+	case 1:
+		config.reconnectPolicy = HimotheeReconnectPolicy::Enabled;
+		break;
+	case 2:
+		config.reconnectPolicy = HimotheeReconnectPolicy::Disabled;
+		break;
+	default:
+		config.reconnectPolicy = HimotheeReconnectPolicy::Inherit;
+		break;
+	}
 	config.server = serverEdit->text().trimmed().toStdString();
 	config.key = keyEdit->text().toStdString();
 	config.useAuth = useAuthCheck->isChecked();
@@ -413,6 +437,7 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	nameEdit->setEnabled(enabled);
 	enabledCheck->setEnabled(enabled);
 	encoderModeCombo->setEnabled(enabled);
+	reconnectPolicyCombo->setEnabled(enabled);
 	serverEdit->setEnabled(enabled);
 	keyEdit->setEnabled(enabled);
 	showSecretsCheck->setEnabled(enabled);
@@ -422,6 +447,7 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	maxRetriesSpin->setEnabled(enabled);
 	retryDelaySpin->setEnabled(enabled);
 	UpdateEncoderControls();
+	UpdateReconnectControls();
 
 	const bool canEditList = enabled && !main->StreamingActive();
 	addButton->setEnabled(!main->StreamingActive());
@@ -439,6 +465,15 @@ void HimotheeMultistreamDock::UpdateEncoderControls()
 	audioBitrateSpin->setEnabled(editorAvailable && independent);
 	outputWidthSpin->setEnabled(editorAvailable && independent);
 	outputHeightSpin->setEnabled(editorAvailable && independent);
+}
+
+void HimotheeMultistreamDock::UpdateReconnectControls()
+{
+	const bool editorAvailable = reconnectPolicyCombo->isEnabled();
+	const bool reconnectEnabled = reconnectPolicyCombo->currentIndex() != 2;
+
+	maxRetriesSpin->setEnabled(editorAvailable && reconnectEnabled);
+	retryDelaySpin->setEnabled(editorAvailable && reconnectEnabled);
 }
 
 void HimotheeMultistreamDock::AddDestination()
@@ -459,6 +494,7 @@ void HimotheeMultistreamDock::AddDestination()
 	config.audioBitrateKbps = 0;
 	config.outputWidth = 0;
 	config.outputHeight = 0;
+	config.reconnectPolicy = HimotheeReconnectPolicy::Inherit;
 	config.maxRetries = -1;
 	config.retryDelaySeconds = -1;
 	workingDestinations.emplace_back(std::move(config));
