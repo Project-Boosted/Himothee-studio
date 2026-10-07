@@ -66,6 +66,7 @@ private:
 	std::unordered_map<std::string, uint64_t> lastSampleMsById;
 
 	void BuildUi();
+	void RefreshAudioTrackLabels();
 	void RebuildDestinationTree();
 	void LoadEditor(int index);
 	void StoreEditor();
