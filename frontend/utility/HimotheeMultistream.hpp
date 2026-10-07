@@ -14,6 +14,12 @@ enum class HimotheeEncoderMode {
 	Independent,
 };
 
+enum class HimotheeReconnectPolicy {
+	Inherit,
+	Enabled,
+	Disabled,
+};
+
 enum class HimotheeDestinationState {
 	Disabled,
 	Idle,
@@ -35,6 +41,7 @@ struct HimotheeDestinationConfig {
 	int audioBitrateKbps = 0;
 	uint32_t outputWidth = 0;
 	uint32_t outputHeight = 0;
+	HimotheeReconnectPolicy reconnectPolicy = HimotheeReconnectPolicy::Inherit;
 
 	std::string server;
 	std::string key;
@@ -58,6 +65,10 @@ struct HimotheeDestinationStatus {
 	int totalFrames = 0;
 	int connectTimeMs = -1;
 	float congestion = 0.0f;
+	uint32_t reconnectCount = 0;
+	uint32_t errorCount = 0;
+	uint64_t uptimeSeconds = 0;
+	uint64_t stateSeconds = 0;
 	std::string videoCodec;
 	std::string audioCodec;
 };
