@@ -90,7 +90,7 @@ struct HimotheeMultistreamManager::DestinationRuntime {
 	OBSServiceAutoRelease service;
 	OBSOutputAutoRelease output;
 	OBSEncoderAutoRelease independentVideoEncoder;
-	OBSEncoderAutoRelease independentAudioEncoder;
+	OBSEncoderAutoRelease destinationAudioEncoder;
 
 	OBSSignal startSignal;
 	OBSSignal stopSignal;
@@ -170,6 +170,10 @@ bool HimotheeMultistreamManager::Load()
 										     : HimotheeEncoderMode::Shared;
 		config.videoBitrateKbps = static_cast<int>(obs_data_get_int(item, "video_bitrate_kbps"));
 		config.audioBitrateKbps = static_cast<int>(obs_data_get_int(item, "audio_bitrate_kbps"));
+		config.audioTrack = static_cast<uint32_t>(obs_data_get_int(item, "audio_track"));
+		if (config.audioTrack < 1 || config.audioTrack > MAX_AUDIO_MIXES) {
+			config.audioTrack = 1;
+		}
 		config.outputWidth = static_cast<uint32_t>(obs_data_get_int(item, "output_width"));
 		config.outputHeight = static_cast<uint32_t>(obs_data_get_int(item, "output_height"));
 		const char *reconnectPolicy = obs_data_get_string(item, "reconnect_policy");
@@ -229,6 +233,7 @@ bool HimotheeMultistreamManager::Save() const
 				    config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
 		obs_data_set_int(item, "video_bitrate_kbps", config.videoBitrateKbps);
 		obs_data_set_int(item, "audio_bitrate_kbps", config.audioBitrateKbps);
+		obs_data_set_int(item, "audio_track", config.audioTrack);
 		obs_data_set_int(item, "output_width", config.outputWidth);
 		obs_data_set_int(item, "output_height", config.outputHeight);
 		const char *reconnectPolicy = "inherit";
@@ -291,6 +296,15 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 	auto runtime = make_unique<DestinationRuntime>();
 	runtime->config = config;
 
+	if (config.audioTrack < 1 || config.audioTrack > MAX_AUDIO_MIXES) {
+		runtime->state = HimotheeDestinationState::Error;
+		runtime->lastError = "Audio track must be between 1 and 6.";
+		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' has invalid audio track %u.",
+		     config.name.c_str(), config.audioTrack);
+		runtimes.emplace_back(std::move(runtime));
+		return false;
+	}
+
 	if (config.server.empty()) {
 		runtime->state = HimotheeDestinationState::Error;
 		runtime->lastError = "No RTMP/RTMPS server is configured.";
@@ -316,53 +330,77 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 
 	obs_encoder_t *videoEncoder = primaryVideoEncoder;
 	obs_encoder_t *audioEncoder = primaryAudioEncoder;
+	const size_t primaryMixerIndex = obs_encoder_get_mixer_index(primaryAudioEncoder);
+	const size_t selectedMixerIndex = static_cast<size_t>(config.audioTrack - 1);
 
 	if (config.encoderMode == HimotheeEncoderMode::Independent) {
 		const char *videoEncoderId = obs_encoder_get_id(primaryVideoEncoder);
-		const char *audioEncoderId = obs_encoder_get_id(primaryAudioEncoder);
-		if (!videoEncoderId || !audioEncoderId) {
+		if (!videoEncoderId) {
 			runtime->state = HimotheeDestinationState::Error;
-			runtime->lastError = "Could not determine the primary encoder types.";
+			runtime->lastError = "Could not determine the primary video encoder type.";
 			runtimes.emplace_back(std::move(runtime));
 			return false;
 		}
 
 		OBSDataAutoRelease videoSettings = obs_encoder_get_settings(primaryVideoEncoder);
-		OBSDataAutoRelease audioSettings = obs_encoder_get_settings(primaryAudioEncoder);
 		if (config.videoBitrateKbps > 0) {
 			obs_data_set_int(videoSettings, "bitrate", config.videoBitrateKbps);
 		}
-		if (config.audioBitrateKbps > 0) {
-			obs_data_set_int(audioSettings, "bitrate", config.audioBitrateKbps);
-		}
 
 		const string videoName = "himothee_independent_video_" + to_string(index + 1);
-		const string audioName = "himothee_independent_audio_" + to_string(index + 1);
-
 		runtime->independentVideoEncoder = OBSEncoderAutoRelease{
 			obs_video_encoder_create(videoEncoderId, videoName.c_str(), videoSettings, nullptr)};
-		runtime->independentAudioEncoder = OBSEncoderAutoRelease{
-			obs_audio_encoder_create(audioEncoderId, audioName.c_str(), audioSettings,
-						 obs_encoder_get_mixer_index(primaryAudioEncoder), nullptr)};
 
-		if (!runtime->independentVideoEncoder || !runtime->independentAudioEncoder) {
+		if (!runtime->independentVideoEncoder) {
 			runtime->state = HimotheeDestinationState::Error;
-			runtime->lastError = "Failed to create independent video/audio encoders.";
-			blog(LOG_WARNING, "[Himothee Multistream] Failed to create independent encoders for '%s'.",
+			runtime->lastError = "Failed to create independent video encoder.";
+			blog(LOG_WARNING, "[Himothee Multistream] Failed to create independent video encoder for '%s'.",
 			     config.name.c_str());
 			runtimes.emplace_back(std::move(runtime));
 			return false;
 		}
 
 		obs_encoder_set_video(runtime->independentVideoEncoder, obs_get_video());
-		obs_encoder_set_audio(runtime->independentAudioEncoder, obs_get_audio());
 
 		if (config.outputWidth > 0 && config.outputHeight > 0) {
 			obs_encoder_set_scaled_size(runtime->independentVideoEncoder, config.outputWidth, config.outputHeight);
 		}
 
 		videoEncoder = runtime->independentVideoEncoder;
-		audioEncoder = runtime->independentAudioEncoder;
+	}
+
+	const bool needsDedicatedAudio = config.encoderMode == HimotheeEncoderMode::Independent ||
+					 selectedMixerIndex != primaryMixerIndex || config.audioBitrateKbps > 0;
+
+	if (needsDedicatedAudio) {
+		const char *audioEncoderId = obs_encoder_get_id(primaryAudioEncoder);
+		if (!audioEncoderId) {
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError = "Could not determine the primary audio encoder type.";
+			runtimes.emplace_back(std::move(runtime));
+			return false;
+		}
+
+		OBSDataAutoRelease audioSettings = obs_encoder_get_settings(primaryAudioEncoder);
+		if (config.audioBitrateKbps > 0) {
+			obs_data_set_int(audioSettings, "bitrate", config.audioBitrateKbps);
+		}
+
+		const string audioName = "himothee_destination_audio_" + to_string(index + 1);
+		runtime->destinationAudioEncoder = OBSEncoderAutoRelease{
+			obs_audio_encoder_create(audioEncoderId, audioName.c_str(), audioSettings, selectedMixerIndex, nullptr)};
+
+		if (!runtime->destinationAudioEncoder) {
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError = "Failed to create the destination audio encoder.";
+			blog(LOG_WARNING, "[Himothee Multistream] Failed to create Track %u audio encoder for '%s'.",
+			     config.audioTrack, config.name.c_str());
+			runtimes.emplace_back(std::move(runtime));
+			return false;
+		}
+
+		obs_encoder_set_audio(runtime->destinationAudioEncoder, obs_get_audio());
+		audioEncoder = runtime->destinationAudioEncoder;
 	}
 
 	OBSDataAutoRelease serviceSettings = obs_data_create();
@@ -482,9 +520,9 @@ bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinati
 
 	runtime->state = HimotheeDestinationState::Prepared;
 	runtime->stateChangedAtNs = os_gettime_ns();
-	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using %s encoders.",
+	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using %s video and Track %u audio.",
 	     config.name.c_str(),
-	     config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
+	     config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared", config.audioTrack);
 
 	runtimes.emplace_back(std::move(runtime));
 	return true;
@@ -665,6 +703,8 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 		status.id = runtime->config.id;
 		status.name = runtime->config.name;
 		status.encoderMode = runtime->config.encoderMode;
+		status.audioTrack = runtime->config.audioTrack;
+		status.dedicatedAudioEncoder = static_cast<bool>(runtime->destinationAudioEncoder);
 		status.state = runtime->state;
 		status.lastError = runtime->lastError;
 		status.reconnectCount = runtime->reconnectCount;
