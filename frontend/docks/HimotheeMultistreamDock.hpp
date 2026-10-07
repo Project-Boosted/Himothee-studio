@@ -41,6 +41,7 @@ private:
 	QComboBox *encoderModeCombo = nullptr;
 	QSpinBox *videoBitrateSpin = nullptr;
 	QSpinBox *audioBitrateSpin = nullptr;
+	QComboBox *audioTrackCombo = nullptr;
 	QSpinBox *outputWidthSpin = nullptr;
 	QSpinBox *outputHeightSpin = nullptr;
 	QComboBox *reconnectPolicyCombo = nullptr;
