@@ -84,6 +84,8 @@ struct HimotheeMultistreamManager::DestinationRuntime {
 
 	OBSServiceAutoRelease service;
 	OBSOutputAutoRelease output;
+	OBSEncoderAutoRelease independentVideoEncoder;
+	OBSEncoderAutoRelease independentAudioEncoder;
 
 	OBSSignal startSignal;
 	OBSSignal stopSignal;
@@ -157,6 +159,14 @@ bool HimotheeMultistreamManager::Load()
 			config.platform = "Custom RTMP";
 		}
 		config.enabled = obs_data_get_bool(item, "enabled");
+		const char *encoderMode = obs_data_get_string(item, "encoder_mode");
+		config.encoderMode =
+			encoderMode && astrcmpi(encoderMode, "independent") == 0 ? HimotheeEncoderMode::Independent
+										     : HimotheeEncoderMode::Shared;
+		config.videoBitrateKbps = static_cast<int>(obs_data_get_int(item, "video_bitrate_kbps"));
+		config.audioBitrateKbps = static_cast<int>(obs_data_get_int(item, "audio_bitrate_kbps"));
+		config.outputWidth = static_cast<uint32_t>(obs_data_get_int(item, "output_width"));
+		config.outputHeight = static_cast<uint32_t>(obs_data_get_int(item, "output_height"));
 		config.server = obs_data_get_string(item, "server");
 		config.key = obs_data_get_string(item, "key");
 		config.useAuth = obs_data_get_bool(item, "use_auth");
@@ -202,6 +212,12 @@ bool HimotheeMultistreamManager::Save() const
 		obs_data_set_string(item, "name", config.name.c_str());
 		obs_data_set_string(item, "platform", config.platform.c_str());
 		obs_data_set_bool(item, "enabled", config.enabled);
+		obs_data_set_string(item, "encoder_mode",
+				    config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
+		obs_data_set_int(item, "video_bitrate_kbps", config.videoBitrateKbps);
+		obs_data_set_int(item, "audio_bitrate_kbps", config.audioBitrateKbps);
+		obs_data_set_int(item, "output_width", config.outputWidth);
+		obs_data_set_int(item, "output_height", config.outputHeight);
 		obs_data_set_string(item, "server", config.server.c_str());
 		obs_data_set_string(item, "key", config.key.c_str());
 		obs_data_set_bool(item, "use_auth", config.useAuth);
@@ -245,7 +261,7 @@ bool HimotheeMultistreamManager::ReplaceDestinations(vector<HimotheeDestinationC
 	return Save();
 }
 
-bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationConfig &config, size_t index,
+bool HimotheeMultistreamManager::BuildDestinationRuntime(const HimotheeDestinationConfig &config, size_t index,
 						    obs_output_t *primaryOutput)
 {
 	if (!config.enabled) {
@@ -264,18 +280,69 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 		return false;
 	}
 
-	obs_encoder_t *videoEncoder = obs_output_get_video_encoder(primaryOutput);
-	obs_encoder_t *audioEncoder = obs_output_get_audio_encoder(primaryOutput, 0);
+	obs_encoder_t *primaryVideoEncoder = obs_output_get_video_encoder(primaryOutput);
+	obs_encoder_t *primaryAudioEncoder = obs_output_get_audio_encoder(primaryOutput, 0);
 
-	if (!videoEncoder || !audioEncoder) {
+	if (!primaryVideoEncoder || !primaryAudioEncoder) {
 		runtime->state = HimotheeDestinationState::Error;
-		runtime->lastError = "The primary stream does not expose compatible shared video/audio encoders.";
+		runtime->lastError = "The primary stream does not expose usable video/audio encoders.";
 		blog(LOG_WARNING,
-		     "[Himothee Multistream] Destination '%s' cannot use shared mode because the primary output "
-		     "does not expose both primary video and audio encoders.",
+		     "[Himothee Multistream] Destination '%s' cannot be prepared because the primary output "
+		     "does not expose both video and audio encoders.",
 		     config.name.c_str());
 		runtimes.emplace_back(std::move(runtime));
 		return false;
+	}
+
+	obs_encoder_t *videoEncoder = primaryVideoEncoder;
+	obs_encoder_t *audioEncoder = primaryAudioEncoder;
+
+	if (config.encoderMode == HimotheeEncoderMode::Independent) {
+		const char *videoEncoderId = obs_encoder_get_id(primaryVideoEncoder);
+		const char *audioEncoderId = obs_encoder_get_id(primaryAudioEncoder);
+		if (!videoEncoderId || !audioEncoderId) {
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError = "Could not determine the primary encoder types.";
+			runtimes.emplace_back(std::move(runtime));
+			return false;
+		}
+
+		OBSDataAutoRelease videoSettings = obs_encoder_get_settings(primaryVideoEncoder);
+		OBSDataAutoRelease audioSettings = obs_encoder_get_settings(primaryAudioEncoder);
+		if (config.videoBitrateKbps > 0) {
+			obs_data_set_int(videoSettings, "bitrate", config.videoBitrateKbps);
+		}
+		if (config.audioBitrateKbps > 0) {
+			obs_data_set_int(audioSettings, "bitrate", config.audioBitrateKbps);
+		}
+
+		const string videoName = "himothee_independent_video_" + to_string(index + 1);
+		const string audioName = "himothee_independent_audio_" + to_string(index + 1);
+
+		runtime->independentVideoEncoder = OBSVideoEncoderAutoRelease{
+			obs_video_encoder_create(videoEncoderId, videoName.c_str(), videoSettings, nullptr)};
+		runtime->independentAudioEncoder = OBSAudioEncoderAutoRelease{
+			obs_audio_encoder_create(audioEncoderId, audioName.c_str(), audioSettings,
+						 obs_encoder_get_mixer_index(primaryAudioEncoder), nullptr)};
+
+		if (!runtime->independentVideoEncoder || !runtime->independentAudioEncoder) {
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError = "Failed to create independent video/audio encoders.";
+			blog(LOG_WARNING, "[Himothee Multistream] Failed to create independent encoders for '%s'.",
+			     config.name.c_str());
+			runtimes.emplace_back(std::move(runtime));
+			return false;
+		}
+
+		obs_encoder_set_video(runtime->independentVideoEncoder, obs_get_video());
+		obs_encoder_set_audio(runtime->independentAudioEncoder, obs_get_audio());
+
+		if (config.outputWidth > 0 && config.outputHeight > 0) {
+			obs_encoder_set_scaled_size(runtime->independentVideoEncoder, config.outputWidth, config.outputHeight);
+		}
+
+		videoEncoder = runtime->independentVideoEncoder;
+		audioEncoder = runtime->independentAudioEncoder;
 	}
 
 	OBSDataAutoRelease serviceSettings = obs_data_create();
@@ -322,8 +389,9 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 
 	if (!CodecListContains(supportedVideoCodecs, videoCodec)) {
 		runtime->state = HimotheeDestinationState::Error;
-		runtime->lastError = string("Shared video codec '") + (videoCodec ? videoCodec : "unknown") +
-				     "' is not supported by this destination output.";
+		runtime->lastError = string(config.encoderMode == HimotheeEncoderMode::Independent ? "Independent video codec '" :
+													   "Shared video codec '") +
+				     (videoCodec ? videoCodec : "unknown") + "' is not supported by this destination output.";
 		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared video codec '%s'.",
 		     config.name.c_str(), videoCodec ? videoCodec : "unknown");
 		runtimes.emplace_back(std::move(runtime));
@@ -332,8 +400,9 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 
 	if (!CodecListContains(supportedAudioCodecs, audioCodec)) {
 		runtime->state = HimotheeDestinationState::Error;
-		runtime->lastError = string("Shared audio codec '") + (audioCodec ? audioCodec : "unknown") +
-				     "' is not supported by this destination output.";
+		runtime->lastError = string(config.encoderMode == HimotheeEncoderMode::Independent ? "Independent audio codec '" :
+													   "Shared audio codec '") +
+				     (audioCodec ? audioCodec : "unknown") + "' is not supported by this destination output.";
 		blog(LOG_WARNING, "[Himothee Multistream] Destination '%s' rejected shared audio codec '%s'.",
 		     config.name.c_str(), audioCodec ? audioCodec : "unknown");
 		runtimes.emplace_back(std::move(runtime));
@@ -380,8 +449,9 @@ bool HimotheeMultistreamManager::BuildSharedRuntime(const HimotheeDestinationCon
 	runtime->reconnectSuccessSignal.Connect(signalHandler, "reconnect_success", OnOutputReconnectSuccess, runtime.get());
 
 	runtime->state = HimotheeDestinationState::Prepared;
-	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using shared encoders.",
-	     config.name.c_str());
+	blog(LOG_INFO, "[Himothee Multistream] Prepared destination '%s' using %s encoders.",
+	     config.name.c_str(),
+	     config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
 
 	runtimes.emplace_back(std::move(runtime));
 	return true;
@@ -405,12 +475,7 @@ bool HimotheeMultistreamManager::PrepareSharedOutputs(obs_output_t *primaryOutpu
 	}
 
 	const uint32_t flags = obs_output_get_flags(primaryOutput);
-	if ((flags & OBS_OUTPUT_MULTI_TRACK_VIDEO) != 0) {
-		blog(LOG_WARNING,
-		     "[Himothee Multistream] Shared destinations are disabled while the primary OBS multitrack-video "
-		     "output is active.");
-		return false;
-	}
+	const bool primaryIsMultitrackVideo = (flags & OBS_OUTPUT_MULTI_TRACK_VIDEO) != 0;
 
 	bool allPrepared = true;
 	for (size_t i = 0; i < destinations.size(); i++) {
@@ -418,7 +483,18 @@ bool HimotheeMultistreamManager::PrepareSharedOutputs(obs_output_t *primaryOutpu
 			continue;
 		}
 
-		if (!BuildSharedRuntime(destinations[i], i, primaryOutput)) {
+		if (primaryIsMultitrackVideo && destinations[i].encoderMode == HimotheeEncoderMode::Shared) {
+			auto runtime = make_unique<DestinationRuntime>();
+			runtime->config = destinations[i];
+			runtime->state = HimotheeDestinationState::Error;
+			runtime->lastError =
+				"Shared mode is unavailable while the primary OBS multitrack-video output is active.";
+			runtimes.emplace_back(std::move(runtime));
+			allPrepared = false;
+			continue;
+		}
+
+		if (!BuildDestinationRuntime(destinations[i], i, primaryOutput)) {
 			allPrepared = false;
 		}
 	}
@@ -550,6 +626,7 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 		HimotheeDestinationStatus status;
 		status.id = runtime->config.id;
 		status.name = runtime->config.name;
+		status.encoderMode = runtime->config.encoderMode;
 		status.state = runtime->state;
 		status.lastError = runtime->lastError;
 
