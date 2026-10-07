@@ -47,6 +47,7 @@
 extern volatile bool recording_paused;
 
 class ColorSelect;
+class HimotheeMultistreamDock;
 class OBSAbout;
 class OBSBasicAdvAudio;
 class OBSBasicFilters;
@@ -451,6 +452,7 @@ private:
 
 	QPointer<OBSDock> controlsDock;
 	QPointer<OBSDock> mixerDock;
+	QPointer<HimotheeMultistreamDock> himotheeMultistreamDock;
 
 public:
 	void AddDockWidget(QDockWidget *dock, Qt::DockWidgetArea area, bool extraBrowser = false);
@@ -756,6 +758,14 @@ private:
 	bool IsFFmpegOutputToURL() const;
 	bool OutputPathValid();
 	void OutputPathInvalidMessage();
+
+public:
+	HimotheeMultistreamManager *GetHimotheeMultistreamManager() const
+	{
+		return outputHandler ? outputHandler->himotheeMultistream.get() : nullptr;
+	}
+
+private:
 
 	// TODO: Unimplemented, remove.
 	void SetupEncoders();
