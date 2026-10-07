@@ -558,8 +558,13 @@ bool HimotheeMultistreamManager::PrepareSharedOutputs(obs_output_t *primaryOutpu
 			auto runtime = make_unique<DestinationRuntime>();
 			runtime->config = destinations[i];
 			runtime->state = HimotheeDestinationState::Error;
+			runtime->errorCount = 1;
 			runtime->lastError =
-				"Shared mode is unavailable while the primary OBS multitrack-video output is active.";
+				"Shared Encoder cannot be used while OBS Multitrack Video / Enhanced Broadcasting is active. "
+				"Stop streaming and either disable Multitrack Video / Enhanced Broadcasting or set this "
+				"destination to Independent Encoder.";
+			blog(LOG_WARNING, "[Himothee Multistream] Destination '%s': %s",
+			     runtime->config.name.c_str(), runtime->lastError.c_str());
 			runtimes.emplace_back(std::move(runtime));
 			allPrepared = false;
 			continue;
