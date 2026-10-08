@@ -426,6 +426,15 @@ bool HimotheeOverlayManager::Load()
 				       ? static_cast<uint32_t>(obs_data_get_int(item, "media_opacity"))
 				       : 100;
 		overlay.mediaLoop = !obs_data_has_user_value(item, "media_loop") || obs_data_get_bool(item, "media_loop");
+		overlay.decimalValue =
+			obs_data_has_user_value(item, "decimal_value") ? obs_data_get_double(item, "decimal_value") : 0.0;
+		overlay.checkoutScore =
+			obs_data_has_user_value(item, "checkout_score") ? obs_data_get_int(item, "checkout_score") : 0;
+		overlay.checkoutRoute = obs_data_get_string(item, "checkout_route");
+		overlay.notificationDurationMs = obs_data_has_user_value(item, "notification_duration_ms")
+						 ? obs_data_get_int(item, "notification_duration_ms")
+						 : 3000;
+		overlay.notificationUntilMs = 0;
 
 		if (overlay.id.empty()) {
 			overlay.id = "overlay-" + to_string(i + 1);
@@ -452,6 +461,9 @@ bool HimotheeOverlayManager::Load()
 		overlay.backgroundOpacity = min<uint32_t>(overlay.backgroundOpacity, 100);
 		overlay.cornerRadius = min<uint32_t>(overlay.cornerRadius, 200);
 		overlay.mediaOpacity = min<uint32_t>(overlay.mediaOpacity, 100);
+		overlay.decimalValue = max(0.0, overlay.decimalValue);
+		overlay.checkoutScore = clamp<int64_t>(overlay.checkoutScore, 0, 170);
+		overlay.notificationDurationMs = clamp<int64_t>(overlay.notificationDurationMs, 500, 15000);
 		if (!HimotheeOverlayIsTimer(overlay.type)) {
 			overlay.running = false;
 			overlay.startedAtMs = 0;
@@ -511,6 +523,10 @@ bool HimotheeOverlayManager::Save() const
 		obs_data_set_string(item, "media_path", overlay.mediaPath.c_str());
 		obs_data_set_int(item, "media_opacity", overlay.mediaOpacity);
 		obs_data_set_bool(item, "media_loop", overlay.mediaLoop);
+		obs_data_set_double(item, "decimal_value", overlay.decimalValue);
+		obs_data_set_int(item, "checkout_score", overlay.checkoutScore);
+		obs_data_set_string(item, "checkout_route", overlay.checkoutRoute.c_str());
+		obs_data_set_int(item, "notification_duration_ms", overlay.notificationDurationMs);
 		obs_data_array_push_back(array, item);
 	}
 
@@ -529,13 +545,19 @@ bool HimotheeOverlayManager::ReplaceOverlays(const vector<HimotheeOverlayDefinit
 
 	for (auto &candidate : merged) {
 		const auto *existing = Find(candidate.id);
-		if (!existing || existing->type != candidate.type || !HimotheeOverlayIsTimer(candidate.type)) {
+		if (!existing || existing->type != candidate.type) {
 			continue;
 		}
 
-		candidate.running = existing->running;
-		candidate.startedAtMs = existing->startedAtMs;
-		candidate.elapsedMs = existing->elapsedMs;
+		if (HimotheeOverlayIsTimer(candidate.type)) {
+			candidate.running = existing->running;
+			candidate.startedAtMs = existing->startedAtMs;
+			candidate.elapsedMs = existing->elapsedMs;
+		}
+
+		if (candidate.type == HimotheeOverlayType::DartsCheckout) {
+			candidate.notificationUntilMs = existing->notificationUntilMs;
+		}
 	}
 
 	overlays = std::move(merged);
