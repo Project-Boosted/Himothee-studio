@@ -719,6 +719,35 @@ string HimotheeOverlayManager::AddOverlay(HimotheeOverlayType type)
 		overlay.notificationDurationMs = 3000;
 		overlay.animation = HimotheeOverlayAnimation::Pop;
 		break;
+	case HimotheeOverlayType::GamingKDA:
+		overlay.name = "Gaming KDA";
+		overlay.title = "K / D / A";
+		break;
+	case HimotheeOverlayType::GamingWinsLosses:
+		overlay.name = "Gaming Wins Losses";
+		overlay.title = "W / L";
+		break;
+	case HimotheeOverlayType::GamingRound:
+		overlay.name = "Gaming Round";
+		overlay.title = "Round";
+		break;
+	case HimotheeOverlayType::GamingAttempts:
+		overlay.name = "Gaming Attempts";
+		overlay.title = "Attempts";
+		break;
+	case HimotheeOverlayType::GamingDeaths:
+		overlay.name = "Gaming Deaths";
+		overlay.title = "Deaths";
+		break;
+	case HimotheeOverlayType::GamingPersonalBest:
+		overlay.name = "Gaming Personal Best";
+		overlay.title = "Personal Best";
+		overlay.personalBest = "PB";
+		break;
+	case HimotheeOverlayType::GamingSessionStats:
+		overlay.name = "Gaming Session Stats";
+		overlay.title = "Session Stats";
+		break;
 	case HimotheeOverlayType::Text:
 	default:
 		overlay.name = "Text Overlay";
@@ -779,7 +808,9 @@ bool HimotheeOverlayManager::AdjustValue(const string &id, int64_t delta)
 
 	overlay->value += delta;
 	if (overlay->type == HimotheeOverlayType::KillCounter || overlay->type == HimotheeOverlayType::StreakCounter ||
-	    overlay->type == HimotheeOverlayType::Progress || HimotheeOverlayIsDarts(overlay->type)) {
+	    overlay->type == HimotheeOverlayType::Progress || HimotheeOverlayIsDarts(overlay->type) ||
+	    overlay->type == HimotheeOverlayType::GamingRound || overlay->type == HimotheeOverlayType::GamingAttempts ||
+	    overlay->type == HimotheeOverlayType::GamingDeaths) {
 		overlay->value = max<int64_t>(0, overlay->value);
 	}
 
@@ -882,6 +913,56 @@ bool HimotheeOverlayManager::ClearCheckout(const string &id)
 
 	overlay->notificationUntilMs = 0;
 	return true;
+}
+
+bool HimotheeOverlayManager::AdjustGamingStat(const string &id, const string &stat, int64_t delta)
+{
+	auto *overlay = Find(id);
+	if (!overlay || !HimotheeOverlayIsGaming(overlay->type)) {
+		return false;
+	}
+
+	int64_t *target = nullptr;
+	if (stat == "kills") target = &overlay->gamingKills;
+	else if (stat == "deaths") target = &overlay->gamingDeaths;
+	else if (stat == "assists") target = &overlay->gamingAssists;
+	else if (stat == "wins") target = &overlay->gamingWins;
+	else if (stat == "losses") target = &overlay->gamingLosses;
+	else return false;
+
+	*target = max<int64_t>(0, *target + delta);
+	return Save();
+}
+
+bool HimotheeOverlayManager::ResetGamingStats(const string &id)
+{
+	auto *overlay = Find(id);
+	if (!overlay || !HimotheeOverlayIsGaming(overlay->type)) {
+		return false;
+	}
+
+	overlay->gamingKills = 0;
+	overlay->gamingDeaths = 0;
+	overlay->gamingAssists = 0;
+	overlay->gamingWins = 0;
+	overlay->gamingLosses = 0;
+	if (overlay->type == HimotheeOverlayType::GamingRound ||
+	    overlay->type == HimotheeOverlayType::GamingAttempts ||
+	    overlay->type == HimotheeOverlayType::GamingDeaths) {
+		overlay->value = 0;
+	}
+	return Save();
+}
+
+bool HimotheeOverlayManager::SetPersonalBest(const string &id, const string &value)
+{
+	auto *overlay = Find(id);
+	if (!overlay || overlay->type != HimotheeOverlayType::GamingPersonalBest) {
+		return false;
+	}
+
+	overlay->personalBest = value;
+	return Save();
 }
 
 const HimotheeOverlayDefinition *HimotheeOverlayManager::Find(const string &id) const
