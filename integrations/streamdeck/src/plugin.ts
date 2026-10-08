@@ -16,7 +16,7 @@ const lastPress = new Map<string, number>();
 
 function inspectorUpdate() {
  // SDK routes this only to the currently visible inspector.
- void streamDeck.ui.sendToPropertyInspector({type:"snapshot", online, actions, state}).catch(()=>{});
+ void streamDeck.ui.sendToPropertyInspector(JSON.parse(JSON.stringify({type:"snapshot", online, actions, state}))).catch(()=>{});
 }
 async function paint(context: string) {
  const entry = visible.get(context);
