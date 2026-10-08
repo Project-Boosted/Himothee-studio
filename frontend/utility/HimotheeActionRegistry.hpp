@@ -47,6 +47,8 @@ private:
 	HimotheeActionResult ExecuteStream(const QString &actionId);
 	HimotheeActionResult ExecuteRecording(const QString &actionId);
 	HimotheeActionResult ExecuteReplayBuffer(const QString &actionId);
+	HimotheeActionResult ExecuteScene(const QString &actionId, const QJsonObject &params);
+	HimotheeActionResult ExecuteAudio(const QString &actionId, const QJsonObject &params);
 	HimotheeActionResult ExecuteDestination(const QString &actionId, const QJsonObject &params);
 	HimotheeActionResult ExecuteOverlay(const QString &actionId, const QJsonObject &params);
 	HimotheeActionResult ExecuteCounter(const QString &actionId, const QJsonObject &params);
