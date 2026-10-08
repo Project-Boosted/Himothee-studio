@@ -2,6 +2,21 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.6 — Stage 10.5 Gaming Widgets
+
+- Added combined Gaming K/D/A widget.
+- Added combined Gaming Wins / Losses widget.
+- Added Gaming Round counter.
+- Added Gaming Attempts counter.
+- Added Gaming Deaths counter.
+- Added free-text Gaming Personal Best widget.
+- Added combined Gaming Session Stats widget.
+- Added +Kill, +Death, +Assist, +Win, +Loss, and Reset Stats quick actions.
+- Extended `overlays.json` with persistent gaming statistics.
+- Kept existing designer themes, positions, animations, media layers, and Browser Source URLs.
+- Preserved the v0.10.3 startup lifecycle fix and v0.10.5 automatic overlay-port fallback.
+
+
 ## 0.10.5 — Overlay localhost port-collision hotfix
 
 - Fixed overlay URLs reaching another local service when port 3293 is already occupied.
