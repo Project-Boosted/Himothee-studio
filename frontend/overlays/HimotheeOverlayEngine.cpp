@@ -1027,6 +1027,24 @@ QString HimotheeOverlayManager::RuntimeDisplay(const HimotheeOverlayDefinition &
 		return QString::number(overlay.decimalValue, 'f', 2);
 	case HimotheeOverlayType::DartsCheckout:
 		return overlay.checkoutScore > 0 ? QString::number(overlay.checkoutScore) : QStringLiteral("-");
+	case HimotheeOverlayType::GamingKDA:
+		return QStringLiteral("%1 / %2 / %3")
+			.arg(overlay.gamingKills)
+			.arg(overlay.gamingDeaths)
+			.arg(overlay.gamingAssists);
+	case HimotheeOverlayType::GamingWinsLosses:
+		return QStringLiteral("%1 / %2").arg(overlay.gamingWins).arg(overlay.gamingLosses);
+	case HimotheeOverlayType::GamingRound:
+	case HimotheeOverlayType::GamingAttempts:
+	case HimotheeOverlayType::GamingDeaths:
+		return QString::number(overlay.value);
+	case HimotheeOverlayType::GamingPersonalBest:
+		return QString::fromStdString(overlay.personalBest);
+	case HimotheeOverlayType::GamingSessionStats:
+		return QStringLiteral("K %1  D %2  A %3")
+			.arg(overlay.gamingKills)
+			.arg(overlay.gamingDeaths)
+			.arg(overlay.gamingAssists);
 	case HimotheeOverlayType::Text:
 	default:
 		return QString::fromStdString(overlay.text);
@@ -1393,6 +1411,12 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 	object.insert(QStringLiteral("checkout_score"), static_cast<double>(overlay.checkoutScore));
 	object.insert(QStringLiteral("checkout_route"), QString::fromStdString(overlay.checkoutRoute));
 	object.insert(QStringLiteral("notification_duration_ms"), static_cast<double>(overlay.notificationDurationMs));
+	object.insert(QStringLiteral("gaming_kills"), static_cast<double>(overlay.gamingKills));
+	object.insert(QStringLiteral("gaming_deaths"), static_cast<double>(overlay.gamingDeaths));
+	object.insert(QStringLiteral("gaming_assists"), static_cast<double>(overlay.gamingAssists));
+	object.insert(QStringLiteral("gaming_wins"), static_cast<double>(overlay.gamingWins));
+	object.insert(QStringLiteral("gaming_losses"), static_cast<double>(overlay.gamingLosses));
+	object.insert(QStringLiteral("personal_best"), QString::fromStdString(overlay.personalBest));
 	object.insert(QStringLiteral("running"), overlay.running);
 	object.insert(QStringLiteral("display"), RuntimeDisplay(overlay));
 	object.insert(QStringLiteral("theme"), QString::fromStdString(overlay.theme));
@@ -1446,6 +1470,20 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 		meta = QString::fromStdString(overlay.checkoutRoute);
 	} else if (overlay.type == HimotheeOverlayType::DartsAverage) {
 		meta = QStringLiteral("3-DART AVG");
+	} else if (overlay.type == HimotheeOverlayType::GamingKDA) {
+		meta = QStringLiteral("KILLS / DEATHS / ASSISTS");
+	} else if (overlay.type == HimotheeOverlayType::GamingWinsLosses) {
+		meta = QStringLiteral("WINS / LOSSES");
+	} else if (overlay.type == HimotheeOverlayType::GamingRound) {
+		meta = QStringLiteral("CURRENT ROUND");
+	} else if (overlay.type == HimotheeOverlayType::GamingAttempts) {
+		meta = QStringLiteral("ATTEMPTS");
+	} else if (overlay.type == HimotheeOverlayType::GamingDeaths) {
+		meta = QStringLiteral("DEATHS");
+	} else if (overlay.type == HimotheeOverlayType::GamingPersonalBest) {
+		meta = QStringLiteral("PERSONAL BEST");
+	} else if (overlay.type == HimotheeOverlayType::GamingSessionStats) {
+		meta = QStringLiteral("W %1  L %2").arg(overlay.gamingWins).arg(overlay.gamingLosses);
 	}
 
 	object.insert(QStringLiteral("meta"), meta);
