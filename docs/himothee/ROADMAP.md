@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.9.6**
+Current development version: **0.10.0**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -93,14 +93,65 @@ Recommended chat workflow:
 This avoids maintaining a duplicate OAuth/EventSub/live-chat API stack and keeps
 Himothee focused on streaming/output and production features.
 
-## Next production stages
+## Overlays and production tools
 
-- Alerts/event handling where useful.
+### Stage 10.1 — Overlay Engine & Dock — Implemented / runtime validation next
+
+- Native Himothee Overlays dock.
+- Per-profile `overlays.json`.
+- Localhost overlay server on 127.0.0.1:3293.
+- Stable per-overlay browser-source URLs.
+- JSON runtime state endpoint.
+- New/Delete/Save overlay controls.
+- Show/Hide without reloading the Browser Source.
+- Browser preview and Copy URL.
+- Create OBS Browser Source in the current scene.
+- First basic Text renderer.
+- Width/height stored per overlay.
+
+### Stage 10.2 — Timers & Counters — Next
+
+- Countdown timer.
+- Count-up / stopwatch.
+- Generic counter.
+- Kill counter.
+- Streak counter.
+- Challenge/progress counter.
+- Stream uptime.
+
+### Stage 10.3 — Overlay Designer
+
+- Themes.
+- Fonts, sizing, backgrounds, opacity.
+- Position presets/custom placement.
+- Animations.
+- Image/GIF/video layers.
+
+### Stage 10.4 — Darts Widgets
+
+- 180 counter.
+- 140+ / 100+ counts.
+- Legs/wins/averages.
+- Checkout notification.
+- HimotheeLink/Autodarts event integration.
+
+### Stage 10.5 — Gaming Widgets
+
+- Kills/deaths/assists.
+- Wins/losses.
+- Rounds, attempts, deaths, PBs.
+- Reusable game presets.
+
+### Stage 10.6 — Automation
+
+- OBS hotkeys.
+- Stream Deck actions.
 - Media triggers.
-- Macros.
-- Counters and timers.
-- Browser overlay server.
-- Stream Deck / external control.
+- Sounds.
+- Rules/macros.
+
+### Additional production/release work
+
 - Multistream presets and safer platform defaults.
 - Better primary/secondary service presentation.
 - Release/signing pipeline.
