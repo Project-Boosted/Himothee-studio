@@ -32,6 +32,7 @@
 #endif
 #include <docks/HimotheeMultistreamDock.hpp>
 #include <docks/HimotheeOverlayDock.hpp>
+#include <utility/HimotheeActionRegistry.hpp>
 #include <dialogs/NameDialog.hpp>
 #include <dialogs/OBSAbout.hpp>
 #include <dialogs/OBSBasicAdvAudio.hpp>
@@ -383,6 +384,10 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	himotheeOverlayDock = new HimotheeOverlayDock(this);
 	addDockWidget(Qt::RightDockWidgetArea, himotheeOverlayDock);
 	tabifyDockWidget(himotheeMultistreamDock, himotheeOverlayDock);
+
+	// Central control surface used by native UI, future Stream Deck bridge,
+	// hotkeys, macros, and other external controllers.
+	himotheeActionRegistry = std::make_unique<HimotheeActionRegistry>(this);
 
 	copyActionsDynamicProperties();
 
@@ -1428,6 +1433,11 @@ void OBSBasic::OnFirstLoad()
 }
 
 OBSBasic::~OBSBasic() {}
+
+HimotheeOverlayManager *OBSBasic::GetHimotheeOverlayManager() const
+{
+	return himotheeOverlayDock ? himotheeOverlayDock->GetManager() : nullptr;
+}
 
 void OBSBasic::applicationShutdown() noexcept
 {
