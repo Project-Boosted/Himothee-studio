@@ -13,21 +13,22 @@ ba2f32bdf791005443988a4955e963663e16b1ed.
 
 Current feature branch:
 
-- feature/darts-widgets
+- feature/gaming-widgets
 
 The earlier feature/unified-chat and feature/twitch-chat branches are
 experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.5**
+Version: **0.10.6**
 
-Focus: **Stage 10.4 — Darts Widgets**.
+Focus: **Stage 10.5 — Gaming Widgets**.
 
-The overlay engine now includes manual darts counters, average display, and
-timed checkout notifications on the same stable localhost Browser Source
-runtime. Automatic HimotheeLink/Autodarts event ingestion is intentionally
-deferred until the manual/runtime widget path is validated.
+The overlay engine now includes reusable K/D/A, Wins/Losses, Session Stats,
+round/attempt/death counters, and a free-text Personal Best display. Stage 10.5
+continues using the same localhost Browser Source runtime, designer, startup
+lifecycle guards, and automatic port fallback introduced in earlier Stage 10
+builds.
 
 ## Development rules
 
