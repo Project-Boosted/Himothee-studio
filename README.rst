@@ -14,7 +14,7 @@ Project Status
 
 Early development / pre-release.
 
-Current Himothee Studio development version: 0.10.2
+Current Himothee Studio development version: 0.10.3
 
 Underlying OBS baseline: OBS Studio 32.2.2
 (commit ba2f32bdf791005443988a4955e963663e16b1ed).
@@ -79,6 +79,7 @@ v0.9.x - Runtime/RTMP compatibility hardening, native-chat removal, and live des
 v0.10.0 - Stage 10.1 Overlay Engine + Himothee Overlays dock.
 v0.10.1 - Stage 10.2 Timers, counters, progress, and stream-uptime widgets.
 v0.10.2 - Stage 10.3 Overlay Designer with themes, positions, animations, and media layers.
+v0.10.3 - Stage 10 overlay startup lifecycle hotfix.
 
 Next overlay stages add darts widgets, gaming presets, hotkeys, Stream Deck
 actions, and automation.
