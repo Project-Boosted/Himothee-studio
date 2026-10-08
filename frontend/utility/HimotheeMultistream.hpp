@@ -36,6 +36,7 @@ struct HimotheeDestinationConfig {
 	std::string name;
 	std::string platform = "Custom RTMP";
 	bool enabled = true;
+	bool autoStart = true;
 	HimotheeEncoderMode encoderMode = HimotheeEncoderMode::Shared;
 	int videoBitrateKbps = 0;
 	int audioBitrateKbps = 0;
@@ -72,6 +73,10 @@ struct HimotheeDestinationStatus {
 	uint64_t stateSeconds = 0;
 	uint32_t audioTrack = 1;
 	bool dedicatedAudioEncoder = false;
+	uint32_t inputWidth = 0;
+	uint32_t inputHeight = 0;
+	uint32_t outputWidth = 0;
+	uint32_t outputHeight = 0;
 	std::string videoCodec;
 	std::string audioCodec;
 };
@@ -87,6 +92,7 @@ public:
 
 	bool PrepareSharedOutputs(obs_output_t *primaryOutput);
 	size_t StartPrepared();
+	size_t StartAllEnabled();
 	bool StartDestination(const std::string &id);
 	void StopDestination(const std::string &id, bool force = false);
 	void StopAll(bool force = false);
@@ -94,6 +100,7 @@ public:
 
 	bool AnyActive() const;
 	size_t EnabledCount() const;
+	size_t AutoStartCount() const;
 
 	const std::vector<HimotheeDestinationConfig> &Destinations() const noexcept;
 	std::vector<HimotheeDestinationStatus> Status() const;
