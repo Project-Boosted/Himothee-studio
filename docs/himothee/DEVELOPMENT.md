@@ -11,19 +11,22 @@ ba2f32bdf791005443988a4955e963663e16b1ed.
 - himothee-dev — integration branch for accepted Himothee work.
 - feature branches — focused development stages.
 
-Current cleanup branch:
+Current feature branch:
 
-- feature/botrix-custom-dock
+- feature/overlay-engine
 
 The earlier feature/unified-chat and feature/twitch-chat branches are
 experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.9.5**
+Version: **0.10.0**
 
-Focus: remove native chat integration and standardise multiplatform chat on
-Botrix Multi Chat through the normal OBS Custom Browser Dock feature.
+Focus: **Stage 10.1 — Overlay Engine & Dock**.
+
+The overlay engine uses a localhost-only HTTP renderer and normal OBS Browser
+Sources. Overlay definitions are profile-level data and must not contain
+credentials or private service tokens.
 
 ## Development rules
 
