@@ -2,6 +2,7 @@
 #include "HimotheeActionRegistry.hpp"
 #include <widgets/OBSBasic.hpp>
 #include <QAbstractSocket>
+#include <QApplication>
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -101,7 +102,7 @@ void Handle(QTcpSocket *socket, OBSBasic *main, const QByteArray &request)
   }
   const QJsonObject command = document.object();
   const QString id = command.value("action_id").toString();
-  if (id.isEmpty() || !command.value("params").isUndefined() && !command.value("params").isObject()) {
+  if (id.isEmpty() || (!command.value("params").isUndefined() && !command.value("params").isObject())) {
    Reply(socket, 400, Error("invalid_action", "action_id and optional object params required.")); return;
   }
   Reply(socket, 200, registry->Execute(id, command.value("params").toObject()).ToJson());
