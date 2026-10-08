@@ -901,28 +901,102 @@ QByteArray HimotheeOverlayManager::BuildOverlayHtml(const HimotheeOverlayDefinit
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-html,body{width:100%;height:100%;margin:0;background:transparent;overflow:hidden;font-family:Inter,Segoe UI,Arial,sans-serif}
-#stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-#card{min-width:320px;max-width:88%;padding:22px 30px;border:1px solid rgba(255,255,255,.18);border-radius:18px;background:rgba(10,12,18,.80);box-shadow:0 18px 55px rgba(0,0,0,.32);color:white;text-align:center}
-#title{font-size:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.78;margin-bottom:8px}
-#value{font-size:64px;font-weight:800;line-height:1.05;word-break:break-word}
+html,body{width:100%;height:100%;margin:0;background:transparent;overflow:hidden}
+#stage{width:100%;height:100%;display:flex;box-sizing:border-box;padding:32px}
+#card{position:relative;min-width:280px;max-width:88%;overflow:hidden;border:1px solid rgba(255,255,255,.18);box-shadow:0 18px 55px rgba(0,0,0,.32);text-align:center}
+#mediaLayer,#tint{position:absolute;inset:0}
+#mediaLayer{z-index:0;overflow:hidden}
+#mediaImage,#mediaVideo{width:100%;height:100%;object-fit:cover;display:none}
+#tint{z-index:1}
+#content{position:relative;z-index:2;padding:22px 30px}
+#title{font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.78;margin-bottom:8px}
+#value{font-weight:800;line-height:1.05;word-break:break-word}
 #meta{font-size:15px;opacity:.62;margin-top:8px}
 #progressWrap{height:14px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:18px;display:none}
-#progressBar{height:100%;width:0%;background:white;transition:width .2s ease}
+#progressBar{height:100%;width:0;background:currentColor;transition:width .2s ease}
 .hidden{display:none!important}
+.anim-fade{animation:himoFade .45s ease both}
+.anim-pop{animation:himoPop .38s cubic-bezier(.2,.9,.25,1.2) both}
+.anim-slide-up{animation:himoSlideUp .42s ease both}
+.anim-slide-left{animation:himoSlideLeft .42s ease both}
+@keyframes himoFade{from{opacity:0}to{opacity:1}}
+@keyframes himoPop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+@keyframes himoSlideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+@keyframes himoSlideLeft{from{opacity:0;transform:translateX(44px)}to{opacity:1;transform:translateX(0)}}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="card">
-    <div id="title"></div>
-    <div id="value"></div>
-    <div id="meta"></div>
-    <div id="progressWrap"><div id="progressBar"></div></div>
+    <div id="mediaLayer">
+      <img id="mediaImage" alt="">
+      <video id="mediaVideo" muted autoplay playsinline></video>
+    </div>
+    <div id="tint"></div>
+    <div id="content">
+      <div id="title"></div>
+      <div id="value"></div>
+      <div id="meta"></div>
+      <div id="progressWrap"><div id="progressBar"></div></div>
+    </div>
   </div>
 </div>
 <script>
 const endpoint='%1';
+let lastVisible=false;
+let lastAnimation='';
+function rgba(hex,alpha){
+  const clean=(hex||'#000000').replace('#','');
+  const full=clean.length===3?clean.split('').map(c=>c+c).join(''):clean.padEnd(6,'0').slice(0,6);
+  const n=parseInt(full,16)||0;
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+alpha+')';
+}
+function setPosition(position){
+  const stage=document.getElementById('stage');
+  const parts=(position||'center').split('_');
+  let vertical='center',horizontal='center';
+  if(parts[0]==='top') vertical='flex-start';
+  if(parts[0]==='bottom') vertical='flex-end';
+  if(parts[0]==='middle') vertical='center';
+  if(parts.length===1 && parts[0]==='center'){vertical='center';horizontal='center';}
+  const side=parts.length>1?parts[1]:parts[0];
+  if(side==='left') horizontal='flex-start';
+  if(side==='right') horizontal='flex-end';
+  if(side==='center') horizontal='center';
+  stage.style.alignItems=vertical;
+  stage.style.justifyContent=horizontal;
+}
+function runAnimation(card,name){
+  card.classList.remove('anim-fade','anim-pop','anim-slide-up','anim-slide-left');
+  if(!name||name==='none') return;
+  void card.offsetWidth;
+  card.classList.add('anim-'+name.replace('_','-'));
+}
+function setMedia(data){
+  const image=document.getElementById('mediaImage');
+  const video=document.getElementById('mediaVideo');
+  image.style.display='none';
+  video.style.display='none';
+  if(!data.media_url) return;
+  if(data.media_kind==='video'){
+    if(video.dataset.src!==data.media_url){
+      video.dataset.src=data.media_url;
+      video.src=data.media_url;
+      video.load();
+    }
+    video.loop=!!data.media_loop;
+    video.style.opacity=(data.media_opacity||100)/100;
+    video.style.display='block';
+    if(video.paused) video.play().catch(()=>{});
+  }else{
+    if(image.dataset.src!==data.media_url){
+      image.dataset.src=data.media_url;
+      image.src=data.media_url;
+    }
+    image.style.opacity=(data.media_opacity||100)/100;
+    image.style.display='block';
+  }
+}
 async function refreshOverlay(){
   try{
     const response=await fetch(endpoint,{cache:'no-store'});
@@ -930,13 +1004,24 @@ async function refreshOverlay(){
     const data=await response.json();
     const card=document.getElementById('card');
     card.classList.toggle('hidden',!data.visible);
+    card.style.fontFamily=data.font_family||'Segoe UI';
+    card.style.color=data.text_color||'#FFFFFF';
+    card.style.borderRadius=(data.corner_radius||0)+'px';
+    document.getElementById('tint').style.background=rgba(data.background_color,(data.background_opacity||0)/100);
+    document.getElementById('title').style.fontSize=Math.max(14,Math.round((data.font_size||64)*.34))+'px';
+    document.getElementById('value').style.fontSize=(data.font_size||64)+'px';
     document.getElementById('title').textContent=data.title||data.name||'';
     document.getElementById('value').textContent=data.display||'';
     document.getElementById('meta').textContent=data.meta||'';
+    setPosition(data.position);
+    setMedia(data);
     const progress=document.getElementById('progressWrap');
     const isProgress=data.type==='progress';
     progress.style.display=isProgress?'block':'none';
     if(isProgress) document.getElementById('progressBar').style.width=(data.progress||0)+'%';
+    if(data.visible && (!lastVisible || lastAnimation!==data.animation)) runAnimation(card,data.animation);
+    lastVisible=!!data.visible;
+    lastAnimation=data.animation||'none';
   }catch(e){}
 }
 refreshOverlay();
@@ -963,6 +1048,37 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 	object.insert(QStringLiteral("target"), static_cast<double>(overlay.target));
 	object.insert(QStringLiteral("running"), overlay.running);
 	object.insert(QStringLiteral("display"), RuntimeDisplay(overlay));
+	object.insert(QStringLiteral("theme"), QString::fromStdString(overlay.theme));
+	object.insert(QStringLiteral("font_family"), QString::fromStdString(overlay.fontFamily));
+	object.insert(QStringLiteral("font_size"), static_cast<int>(overlay.fontSize));
+	object.insert(QStringLiteral("text_color"), QString::fromStdString(overlay.textColor));
+	object.insert(QStringLiteral("background_color"), QString::fromStdString(overlay.backgroundColor));
+	object.insert(QStringLiteral("background_opacity"), static_cast<int>(overlay.backgroundOpacity));
+	object.insert(QStringLiteral("corner_radius"), static_cast<int>(overlay.cornerRadius));
+	object.insert(QStringLiteral("position"), QString::fromUtf8(HimotheeOverlayPositionId(overlay.position)));
+	object.insert(QStringLiteral("animation"), QString::fromUtf8(HimotheeOverlayAnimationId(overlay.animation)));
+	object.insert(QStringLiteral("media_opacity"), static_cast<int>(overlay.mediaOpacity));
+	object.insert(QStringLiteral("media_loop"), overlay.mediaLoop);
+
+	QString mediaUrl;
+	QString mediaKind;
+	if (!overlay.mediaPath.empty()) {
+		const QString mediaPath = QString::fromStdString(overlay.mediaPath);
+		if (mediaPath.startsWith(QStringLiteral("http://"), Qt::CaseInsensitive) ||
+		    mediaPath.startsWith(QStringLiteral("https://"), Qt::CaseInsensitive)) {
+			mediaUrl = mediaPath;
+		} else {
+			mediaUrl = MediaUrl(overlay.id);
+		}
+
+		QString suffix = QFileInfo(QUrl(mediaPath).path()).suffix().toLower();
+		mediaKind = (suffix == QStringLiteral("mp4") || suffix == QStringLiteral("webm") ||
+			     suffix == QStringLiteral("mov") || suffix == QStringLiteral("m4v"))
+				    ? QStringLiteral("video")
+				    : QStringLiteral("image");
+	}
+	object.insert(QStringLiteral("media_url"), mediaUrl);
+	object.insert(QStringLiteral("media_kind"), mediaKind);
 
 	QString meta;
 	int progress = 0;
