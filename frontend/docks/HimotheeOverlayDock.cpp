@@ -80,7 +80,10 @@ HimotheeOverlayDock::HimotheeOverlayDock(OBSBasic *main_) : OBSDock(main_), main
 
 	manager = make_unique<HimotheeOverlayManager>(main);
 	BuildUi();
-	ReloadFromManager();
+
+	// OBSBasic creates docks before OBSInit activates the selected profile.
+	// Do not read profile state from the dock constructor.
+	serverLabel->setText(QStringLiteral("Overlay engine ready — waiting for OBS profile..."));
 
 	refreshTimer = new QTimer(this);
 	refreshTimer->setInterval(250);
@@ -368,15 +371,25 @@ void HimotheeOverlayDock::Refresh()
 		return;
 	}
 
-	const string currentProfilePath = main->GetCurrentProfile().path.u8string();
-	if (currentProfilePath != loadedProfilePath) {
-		manager->LoadForCurrentProfile();
-		ReloadFromManager();
+	if (!manager->ServerRunning()) {
+		manager->StartServer();
+	}
+
+	if (!manager->LoadForCurrentProfile()) {
+		if (manager->ServerRunning()) {
+			serverLabel->setText(
+				QStringLiteral("Overlay server: %1  |  Waiting for OBS profile...")
+					.arg(manager->BaseUrl()));
+		} else {
+			serverLabel->setText(QStringLiteral("Overlay server error: %1")
+						     .arg(QString::fromStdString(manager->ServerError())));
+		}
 		return;
 	}
 
-	if (!manager->ServerRunning()) {
-		manager->StartServer();
+	if (manager->LoadedProfilePath() != loadedProfilePath) {
+		ReloadFromManager();
+		return;
 	}
 
 	if (manager->ServerRunning()) {
@@ -416,23 +429,20 @@ void HimotheeOverlayDock::Refresh()
 
 void HimotheeOverlayDock::ReloadFromManager()
 {
-	if (!manager) {
-		workingOverlays.clear();
-		loadedProfilePath.clear();
-		RebuildTree();
+	if (!manager || !manager->LoadForCurrentProfile()) {
 		return;
 	}
 
-	manager->LoadForCurrentProfile();
 	workingOverlays = manager->Overlays();
-	loadedProfilePath = main->GetCurrentProfile().path.u8string();
+	loadedProfilePath = manager->LoadedProfilePath();
 	currentIndex = -1;
 	RebuildTree();
 
 	if (!workingOverlays.empty()) {
 		overlayTree->setCurrentItem(overlayTree->topLevelItem(0));
+	} else {
+		SetEditorEnabled(false);
 	}
-	Refresh();
 }
 
 void HimotheeOverlayDock::SyncWorkingFromManager()
