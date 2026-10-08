@@ -31,6 +31,7 @@ jobs:
       - name: Verify Stage 10.3 designer implementation
         run: |
           $engine = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp"
+          $engineHeader = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.hpp"
           $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp"
 
           foreach ($pattern in @(
@@ -42,7 +43,7 @@ jobs:
             '/media/',
             'media_opacity'
           )) {
-            if (-not (Select-String -Path $engine -Pattern $pattern -SimpleMatch -Quiet)) {
+            if (-not (Select-String -Path @($engine, $engineHeader) -Pattern $pattern -SimpleMatch -Quiet)) {
               throw "Overlay designer engine is missing: $pattern"
             }
           }
