@@ -11,6 +11,7 @@
 #include <QColor>
 #include <QComboBox>
 #include <QDesktopServices>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -143,6 +144,13 @@ void HimotheeOverlayDock::BuildUi()
 	typeCombo->addItem(QStringLiteral("Countdown"), static_cast<int>(HimotheeOverlayType::Countdown));
 	typeCombo->addItem(QStringLiteral("Stopwatch"), static_cast<int>(HimotheeOverlayType::Stopwatch));
 	typeCombo->addItem(QStringLiteral("Stream Uptime"), static_cast<int>(HimotheeOverlayType::StreamUptime));
+	typeCombo->addItem(QStringLiteral("Darts 180 Counter"), static_cast<int>(HimotheeOverlayType::Darts180));
+	typeCombo->addItem(QStringLiteral("Darts 140+ Counter"), static_cast<int>(HimotheeOverlayType::Darts140Plus));
+	typeCombo->addItem(QStringLiteral("Darts 100+ Counter"), static_cast<int>(HimotheeOverlayType::Darts100Plus));
+	typeCombo->addItem(QStringLiteral("Darts Legs Won"), static_cast<int>(HimotheeOverlayType::DartsLegs));
+	typeCombo->addItem(QStringLiteral("Darts Match Wins"), static_cast<int>(HimotheeOverlayType::DartsWins));
+	typeCombo->addItem(QStringLiteral("Darts Average"), static_cast<int>(HimotheeOverlayType::DartsAverage));
+	typeCombo->addItem(QStringLiteral("Darts Checkout"), static_cast<int>(HimotheeOverlayType::DartsCheckout));
 	form->addRow(QStringLiteral("Type"), typeCombo);
 
 	visibleCheck = new QCheckBox(QStringLiteral("Overlay visible"), editorGroup);
@@ -161,6 +169,30 @@ void HimotheeOverlayDock::BuildUi()
 	valueSpin->setRange(-999999, 999999);
 	counterRowWidget = MakeFormRow(editorGroup, QStringLiteral("Value"), valueSpin);
 	form->addRow(counterRowWidget);
+
+	averageSpin = new QDoubleSpinBox(editorGroup);
+	averageSpin->setRange(0.0, 200.0);
+	averageSpin->setDecimals(2);
+	averageSpin->setSingleStep(0.1);
+	averageRowWidget = MakeFormRow(editorGroup, QStringLiteral("Average"), averageSpin);
+	form->addRow(averageRowWidget);
+
+	checkoutScoreSpin = new QSpinBox(editorGroup);
+	checkoutScoreSpin->setRange(0, 170);
+	checkoutScoreRowWidget = MakeFormRow(editorGroup, QStringLiteral("Checkout"), checkoutScoreSpin);
+	form->addRow(checkoutScoreRowWidget);
+
+	checkoutRouteEdit = new QLineEdit(editorGroup);
+	checkoutRouteEdit->setPlaceholderText(QStringLiteral("e.g. T20 T20 D25"));
+	checkoutRouteRowWidget = MakeFormRow(editorGroup, QStringLiteral("Route"), checkoutRouteEdit);
+	form->addRow(checkoutRouteRowWidget);
+
+	checkoutDurationSpin = new QSpinBox(editorGroup);
+	checkoutDurationSpin->setRange(1, 15);
+	checkoutDurationSpin->setValue(3);
+	checkoutDurationSpin->setSuffix(QStringLiteral(" sec"));
+	checkoutDurationRowWidget = MakeFormRow(editorGroup, QStringLiteral("Show for"), checkoutDurationSpin);
+	form->addRow(checkoutDurationRowWidget);
 
 	targetSpin = new QSpinBox(editorGroup);
 	targetSpin->setRange(1, 999999);
