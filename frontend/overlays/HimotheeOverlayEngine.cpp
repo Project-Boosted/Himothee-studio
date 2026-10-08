@@ -7,7 +7,6 @@
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QNetworkInterface>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QUrl>
@@ -33,9 +32,7 @@ const char *OverlayTypeName(HimotheeOverlayType type)
 
 HimotheeOverlayType ParseOverlayType(const char *type)
 {
-	if (type && astrcmpi(type, "text") == 0) {
-		return HimotheeOverlayType::Text;
-	}
+	(void)type;
 	return HimotheeOverlayType::Text;
 }
 
@@ -371,9 +368,9 @@ QByteArray HimotheeOverlayManager::BuildOverlayHtml(const HimotheeOverlayDefinit
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-html,body{width:100%%;height:100%%;margin:0;background:transparent;overflow:hidden;font-family:Inter,Segoe UI,Arial,sans-serif}
-#stage{width:100%%;height:100%%;display:flex;align-items:center;justify-content:center}
-#card{min-width:320px;max-width:88%%;padding:22px 30px;border:1px solid rgba(255,255,255,.18);border-radius:18px;background:rgba(10,12,18,.80);box-shadow:0 18px 55px rgba(0,0,0,.32);color:white;text-align:center}
+html,body{width:100%;height:100%;margin:0;background:transparent;overflow:hidden;font-family:Inter,Segoe UI,Arial,sans-serif}
+#stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+#card{min-width:320px;max-width:88%;padding:22px 30px;border:1px solid rgba(255,255,255,.18);border-radius:18px;background:rgba(10,12,18,.80);box-shadow:0 18px 55px rgba(0,0,0,.32);color:white;text-align:center}
 #title{font-size:22px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.78;margin-bottom:8px}
 #text{font-size:56px;font-weight:800;line-height:1.05;word-break:break-word}
 .hidden{display:none!important}
@@ -432,8 +429,14 @@ void HimotheeOverlayManager::WriteResponse(QTcpSocket *socket, int statusCode, c
 		reason = "Method Not Allowed";
 	}
 
-	QByteArray headers = "HTTP/1.1 " + QByteArray::number(statusCode) + " " + reason + "\r\n";
-	headers += "Content-Type: " + contentType + "\r\n";
+	QByteArray headers = "HTTP/1.1 ";
+	headers += QByteArray::number(statusCode);
+	headers += " ";
+	headers += reason;
+	headers += "\r\n";
+	headers += "Content-Type: ";
+	headers += contentType;
+	headers += "\r\n";
 	headers += "Cache-Control: no-store, no-cache, must-revalidate\r\n";
 	headers += "Access-Control-Allow-Origin: *\r\n";
 	headers += "Content-Length: " + QByteArray::number(body.size()) + "\r\n";
