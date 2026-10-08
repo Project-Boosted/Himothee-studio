@@ -9,12 +9,14 @@
 
 class OBSBasic;
 class QCheckBox;
+class QComboBox;
 class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
 class QTimer;
 class QTreeWidget;
+class QWidget;
 
 class HimotheeOverlayDock : public OBSDock {
 public:
@@ -31,12 +33,30 @@ private:
 	QLabel *serverLabel = nullptr;
 	QTreeWidget *overlayTree = nullptr;
 	QLineEdit *nameEdit = nullptr;
+	QComboBox *typeCombo = nullptr;
 	QCheckBox *visibleCheck = nullptr;
 	QLineEdit *titleEdit = nullptr;
 	QLineEdit *textEdit = nullptr;
+	QSpinBox *valueSpin = nullptr;
+	QSpinBox *targetSpin = nullptr;
+	QSpinBox *durationSecondsSpin = nullptr;
 	QSpinBox *widthSpin = nullptr;
 	QSpinBox *heightSpin = nullptr;
 	QLabel *urlLabel = nullptr;
+	QLabel *runtimeValueLabel = nullptr;
+
+	QWidget *textRowWidget = nullptr;
+	QWidget *counterRowWidget = nullptr;
+	QWidget *targetRowWidget = nullptr;
+	QWidget *durationRowWidget = nullptr;
+	QWidget *counterControlsWidget = nullptr;
+	QWidget *timerControlsWidget = nullptr;
+
+	QPushButton *decrementButton = nullptr;
+	QPushButton *incrementButton = nullptr;
+	QPushButton *resetCounterButton = nullptr;
+	QPushButton *startPauseTimerButton = nullptr;
+	QPushButton *resetTimerButton = nullptr;
 
 	QPushButton *addButton = nullptr;
 	QPushButton *removeButton = nullptr;
@@ -50,14 +70,22 @@ private:
 	void BuildUi();
 	void Refresh();
 	void ReloadFromManager();
+	void SyncWorkingFromManager();
 	void RebuildTree();
+	void UpdateTreeRow(int index);
 	void LoadEditor(int index);
 	void StoreEditor();
 	bool SaveChanges();
 	void SetEditorEnabled(bool enabled);
+	void UpdateWidgetControls();
+
 	void AddOverlay();
 	void RemoveSelected();
 	void ToggleSelectedVisibility();
+	void AdjustSelectedValue(int delta);
+	void ResetSelectedValue();
+	void ToggleSelectedTimer();
+	void ResetSelectedTimer();
 	void PreviewSelected();
 	void CopySelectedUrl();
 	void CreateBrowserSource();
