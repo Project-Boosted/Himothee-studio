@@ -134,6 +134,7 @@ void HimotheeControlBridge::Accept()
   }
   auto buffer = std::make_shared<QByteArray>();
   QObject::connect(socket, &QTcpSocket::readyRead, socket, [socket, buffer, main = this->main]() {
+   if (socket->property("himo_processed").toBool()) return;
    buffer->append(socket->readAll());
    if (buffer->size() > MAX_REQUEST) {
     Reply(socket, 413, Error("request_too_large", "Request exceeds 64 KiB.")); return;
@@ -152,6 +153,7 @@ void HimotheeControlBridge::Accept()
     }
    }
    if (buffer->size() < split + 4 + length) return;
+   socket->setProperty("himo_processed", true);
    Handle(socket, main, *buffer);
   });
   QObject::connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
