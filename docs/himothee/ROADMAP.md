@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.1**
+Current development version: **0.10.2**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -122,15 +122,19 @@ Himothee focused on streaming/output and production features.
 - Start / Pause / Reset timer controls.
 - Backward-compatible Stage 10.1 Text widgets.
 
-### Stage 10.3 — Overlay Designer — Next
+### Stage 10.3 — Overlay Designer — Implemented / runtime validation next
 
-- Themes.
-- Fonts, sizing, backgrounds, opacity.
-- Position presets/custom placement.
-- Animations.
-- Image/GIF/video layers.
+- Himothee Dark, Minimal, Neon, Transparent, and Custom themes.
+- Font family and font size.
+- Text/background colours.
+- Background opacity and corner radius.
+- Nine-position placement presets.
+- None/Fade/Pop/Slide Up/Slide Left entry animations.
+- Optional image/GIF/video/HTTPS media layer.
+- Local media served through the localhost overlay engine.
+- Designer values persisted per overlay.
 
-### Stage 10.4 — Darts Widgets
+### Stage 10.4 — Darts Widgets — Next
 
 - 180 counter.
 - 140+ / 100+ counts.
