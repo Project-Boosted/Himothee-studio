@@ -47,8 +47,6 @@
 extern volatile bool recording_paused;
 
 class ColorSelect;
-class HimotheeChatDock;
-class HimotheeChatManager;
 class HimotheeMultistreamDock;
 class OBSAbout;
 class OBSBasicAdvAudio;
@@ -454,8 +452,6 @@ private:
 
 	QPointer<OBSDock> controlsDock;
 	QPointer<OBSDock> mixerDock;
-	std::unique_ptr<HimotheeChatManager> himotheeChatManager;
-	QPointer<HimotheeChatDock> himotheeChatDock;
 	QPointer<HimotheeMultistreamDock> himotheeMultistreamDock;
 
 public:
@@ -767,11 +763,6 @@ public:
 	HimotheeMultistreamManager *GetHimotheeMultistreamManager() const
 	{
 		return outputHandler ? outputHandler->himotheeMultistream.get() : nullptr;
-	}
-
-	HimotheeChatManager *GetHimotheeChatManager() const
-	{
-		return himotheeChatManager.get();
 	}
 
 private:
