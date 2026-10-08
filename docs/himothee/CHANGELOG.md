@@ -2,6 +2,21 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.2 — Stage 10.3 Overlay Designer
+
+- Added Himothee Dark, Minimal, Neon, Transparent, and Custom theme presets.
+- Added font family and live-value font-size controls.
+- Added text/background colour controls.
+- Added background opacity and corner radius.
+- Added nine-position overlay placement inside the browser canvas.
+- Added Fade, Pop, Slide Up, and Slide Left entry animations.
+- Added optional image/GIF/video/HTTPS media layers.
+- Added localhost media serving for local designer files.
+- Added media opacity and video-loop controls.
+- Extended `overlays.json` with designer settings while keeping older profiles compatible.
+- Kept Stage 10.1/10.2 browser URLs stable.
+
+
 ## 0.10.1 — Stage 10.2 Timers & Counters
 
 - Added generic Counter widget.
