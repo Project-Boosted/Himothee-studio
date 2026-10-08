@@ -261,9 +261,9 @@ HimotheeOverlayManager::HimotheeOverlayManager(OBSBasic *main_) : main(main_), s
 	QObject::connect(runtimeTimer.get(), &QTimer::timeout, runtimeTimer.get(), [this]() { UpdateRuntimeState(); });
 	runtimeTimer->start();
 
+	// The OBSBasic constructor runs before the active profile/configuration is initialized.
+	// Starting the localhost renderer is safe here; profile I/O is deliberately deferred.
 	StartServer();
-	LoadForCurrentProfile();
-	UpdateRuntimeState();
 }
 
 HimotheeOverlayManager::~HimotheeOverlayManager()
@@ -278,31 +278,41 @@ HimotheeOverlayManager::~HimotheeOverlayManager()
 
 bool HimotheeOverlayManager::LoadForCurrentProfile()
 {
-	if (!main) {
+	if (!main || !main->Config()) {
 		return false;
 	}
 
-	const OBSProfile &profile = main->GetCurrentProfile();
-	const string profilePath = profile.path.u8string();
-	if (loadedProfilePath == profilePath) {
-		return true;
+	try {
+		const OBSProfile &profile = main->GetCurrentProfile();
+		const string profilePath = profile.path.u8string();
+		if (loadedProfilePath == profilePath) {
+			return true;
+		}
+	} catch (const std::exception &error) {
+		blog(LOG_DEBUG, "[Himothee Overlays] Profile not ready yet: %s", error.what());
+		return false;
 	}
 
-	loadedProfilePath = profilePath;
 	return Load();
 }
 
 bool HimotheeOverlayManager::Load()
 {
-	overlays.clear();
-
-	if (!main) {
+	if (!main || !main->Config()) {
 		return false;
 	}
 
-	const OBSProfile &profile = main->GetCurrentProfile();
-	const filesystem::path path = profile.path / filesystem::u8path(kOverlayFileName);
-	loadedProfilePath = profile.path.u8string();
+	filesystem::path profilePath;
+	try {
+		profilePath = main->GetCurrentProfile().path;
+	} catch (const std::exception &error) {
+		blog(LOG_DEBUG, "[Himothee Overlays] Cannot load profile overlays yet: %s", error.what());
+		return false;
+	}
+
+	overlays.clear();
+	const filesystem::path path = profilePath / filesystem::u8path(kOverlayFileName);
+	loadedProfilePath = profilePath.u8string();
 
 	OBSDataAutoRelease root = obs_data_create_from_json_file_safe(path.u8string().c_str(), "bak");
 	if (!root) {
@@ -410,12 +420,19 @@ bool HimotheeOverlayManager::Load()
 
 bool HimotheeOverlayManager::Save() const
 {
-	if (!main) {
+	if (!main || !main->Config()) {
 		return false;
 	}
 
-	const OBSProfile &profile = main->GetCurrentProfile();
-	const filesystem::path path = profile.path / filesystem::u8path(kOverlayFileName);
+	filesystem::path profilePath;
+	try {
+		profilePath = main->GetCurrentProfile().path;
+	} catch (const std::exception &error) {
+		blog(LOG_DEBUG, "[Himothee Overlays] Cannot save profile overlays yet: %s", error.what());
+		return false;
+	}
+
+	const filesystem::path path = profilePath / filesystem::u8path(kOverlayFileName);
 
 	OBSDataAutoRelease root = obs_data_create();
 	OBSDataArrayAutoRelease array = obs_data_array_create();
@@ -721,7 +738,11 @@ QString HimotheeOverlayManager::RuntimeDisplay(const string &id) const
 
 void HimotheeOverlayManager::UpdateRuntimeState()
 {
-	const bool streaming = main && main->StreamingActive();
+	if (!main || !main->Config()) {
+		return;
+	}
+
+	const bool streaming = main->StreamingActive();
 	if (streaming && !streamWasActive) {
 		streamStartedAtMs = NowMs();
 	} else if (!streaming && streamWasActive) {
