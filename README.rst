@@ -14,7 +14,7 @@ Project Status
 
 Early development / pre-release.
 
-Current Himothee Studio development version: 0.9.5
+Current Himothee Studio development version: 0.9.6
 
 Underlying OBS baseline: OBS Studio 32.2.2
 (commit ba2f32bdf791005443988a4955e963663e16b1ed).
@@ -35,6 +35,10 @@ Current Features
 * Reconnect policy, bitrate, dropped frames, uptime, congestion, and errors.
 * Platform-safe H.264 handling for ordinary Twitch and Kick RTMP outputs.
 * Duplicate-primary-stream-key protection.
+* Separate destination Enabled and Auto-start behaviour.
+* Per-destination live Start/Stop controls plus Start All Enabled / Stop Secondaries.
+* Live Input and Output resolution reporting for each destination.
+* Independent per-destination output scaling, such as Twitch 2560x1440 primary + Kick 1920x1080.
 * Normal OBS Custom Browser Docks for external tools such as Botrix Multi Chat.
 
 Chat
@@ -61,7 +65,7 @@ v0.5 - Shared encoder production mode.
 v0.6 - Independent encoders.
 v0.7 - Destination resilience and telemetry.
 v0.8 - Per-destination audio routing.
-v0.9.x - Runtime/RTMP compatibility hardening and native-chat removal.
+v0.9.x - Runtime/RTMP compatibility hardening, native-chat removal, and live destination control audit.
 
 Next development returns to production tools: alerts, media triggers, macros,
 counters/timers, overlays, Stream Deck/external control, and release/security work.
