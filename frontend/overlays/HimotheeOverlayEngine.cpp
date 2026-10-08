@@ -439,7 +439,9 @@ void HimotheeOverlayManager::WriteResponse(QTcpSocket *socket, int statusCode, c
 	headers += "\r\n";
 	headers += "Cache-Control: no-store, no-cache, must-revalidate\r\n";
 	headers += "Access-Control-Allow-Origin: *\r\n";
-	headers += "Content-Length: " + QByteArray::number(body.size()) + "\r\n";
+	headers += "Content-Length: ";
+	headers += QByteArray::number(body.size());
+	headers += "\r\n";
 	headers += "Connection: close\r\n\r\n";
 
 	socket->write(headers);
