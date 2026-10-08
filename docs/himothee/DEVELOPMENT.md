@@ -13,21 +13,21 @@ ba2f32bdf791005443988a4955e963663e16b1ed.
 
 Current feature branch:
 
-- feature/overlay-designer
+- feature/darts-widgets
 
 The earlier feature/unified-chat and feature/twitch-chat branches are
 experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.3**
+Version: **0.10.4**
 
-Focus: **Stage 10.3 — Overlay Designer**.
+Focus: **Stage 10.4 — Darts Widgets**.
 
-The overlay engine now persists visual design settings and can serve local
-image/GIF/video media through its localhost-only HTTP service. Existing Text,
-Timer, Counter, Progress, and Uptime widgets remain on the same stable browser
-URLs.
+The overlay engine now includes manual darts counters, average display, and
+timed checkout notifications on the same stable localhost Browser Source
+runtime. Automatic HimotheeLink/Autodarts event ingestion is intentionally
+deferred until the manual/runtime widget path is validated.
 
 ## Development rules
 
