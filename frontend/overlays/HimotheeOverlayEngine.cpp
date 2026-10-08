@@ -70,6 +70,20 @@ const char *HimotheeOverlayTypeId(HimotheeOverlayType type)
 		return "stopwatch";
 	case HimotheeOverlayType::StreamUptime:
 		return "stream_uptime";
+	case HimotheeOverlayType::Darts180:
+		return "darts_180";
+	case HimotheeOverlayType::Darts140Plus:
+		return "darts_140_plus";
+	case HimotheeOverlayType::Darts100Plus:
+		return "darts_100_plus";
+	case HimotheeOverlayType::DartsLegs:
+		return "darts_legs";
+	case HimotheeOverlayType::DartsWins:
+		return "darts_wins";
+	case HimotheeOverlayType::DartsAverage:
+		return "darts_average";
+	case HimotheeOverlayType::DartsCheckout:
+		return "darts_checkout";
 	case HimotheeOverlayType::Text:
 	default:
 		return "text";
@@ -93,6 +107,20 @@ QString HimotheeOverlayTypeName(HimotheeOverlayType type)
 		return QStringLiteral("Stopwatch");
 	case HimotheeOverlayType::StreamUptime:
 		return QStringLiteral("Stream Uptime");
+	case HimotheeOverlayType::Darts180:
+		return QStringLiteral("Darts 180 Counter");
+	case HimotheeOverlayType::Darts140Plus:
+		return QStringLiteral("Darts 140+ Counter");
+	case HimotheeOverlayType::Darts100Plus:
+		return QStringLiteral("Darts 100+ Counter");
+	case HimotheeOverlayType::DartsLegs:
+		return QStringLiteral("Darts Legs Won");
+	case HimotheeOverlayType::DartsWins:
+		return QStringLiteral("Darts Match Wins");
+	case HimotheeOverlayType::DartsAverage:
+		return QStringLiteral("Darts Average");
+	case HimotheeOverlayType::DartsCheckout:
+		return QStringLiteral("Darts Checkout");
 	case HimotheeOverlayType::Text:
 	default:
 		return QStringLiteral("Text");
@@ -125,13 +153,31 @@ HimotheeOverlayType HimotheeOverlayTypeFromId(const char *type)
 	if (astrcmpi(type, "stream_uptime") == 0) {
 		return HimotheeOverlayType::StreamUptime;
 	}
+	if (astrcmpi(type, "darts_180") == 0) return HimotheeOverlayType::Darts180;
+	if (astrcmpi(type, "darts_140_plus") == 0) return HimotheeOverlayType::Darts140Plus;
+	if (astrcmpi(type, "darts_100_plus") == 0) return HimotheeOverlayType::Darts100Plus;
+	if (astrcmpi(type, "darts_legs") == 0) return HimotheeOverlayType::DartsLegs;
+	if (astrcmpi(type, "darts_wins") == 0) return HimotheeOverlayType::DartsWins;
+	if (astrcmpi(type, "darts_average") == 0) return HimotheeOverlayType::DartsAverage;
+	if (astrcmpi(type, "darts_checkout") == 0) return HimotheeOverlayType::DartsCheckout;
 	return HimotheeOverlayType::Text;
 }
 
 bool HimotheeOverlayIsCounter(HimotheeOverlayType type)
 {
 	return type == HimotheeOverlayType::Counter || type == HimotheeOverlayType::KillCounter ||
-	       type == HimotheeOverlayType::StreakCounter || type == HimotheeOverlayType::Progress;
+	       type == HimotheeOverlayType::StreakCounter || type == HimotheeOverlayType::Progress ||
+	       type == HimotheeOverlayType::Darts180 || type == HimotheeOverlayType::Darts140Plus ||
+	       type == HimotheeOverlayType::Darts100Plus || type == HimotheeOverlayType::DartsLegs ||
+	       type == HimotheeOverlayType::DartsWins;
+}
+
+bool HimotheeOverlayIsDarts(HimotheeOverlayType type)
+{
+	return type == HimotheeOverlayType::Darts180 || type == HimotheeOverlayType::Darts140Plus ||
+	       type == HimotheeOverlayType::Darts100Plus || type == HimotheeOverlayType::DartsLegs ||
+	       type == HimotheeOverlayType::DartsWins || type == HimotheeOverlayType::DartsAverage ||
+	       type == HimotheeOverlayType::DartsCheckout;
 }
 
 bool HimotheeOverlayIsTimer(HimotheeOverlayType type)
