@@ -177,7 +177,7 @@ Calls from future background transports must marshal execution onto the UI threa
 
 ## Stage 10.6.2
 
-The next stage adds the local Stream Deck control bridge:
+The local Stream Deck control bridge is implemented in v0.10.8, pending build and runtime validation:
 
 - localhost-only connection,
 - action discovery,
