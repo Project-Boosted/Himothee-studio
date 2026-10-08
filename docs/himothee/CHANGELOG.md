@@ -2,6 +2,21 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.1 — Stage 10.2 Timers & Counters
+
+- Added generic Counter widget.
+- Added Kill Counter and Streak Counter presets.
+- Added Challenge Progress with target/percentage/progress bar.
+- Added Countdown with Start/Pause/Reset.
+- Added Stopwatch with Start/Pause/Reset.
+- Added Stream Uptime tied to the current primary streaming session.
+- Added +1 / -1 / Reset quick controls for counter widgets.
+- Added live-value status in the Himothee Overlays dock.
+- Extended `overlays.json` with counter/timer runtime state.
+- Preserved backward compatibility with Stage 10.1 Text overlays.
+- Kept browser-source updates live without source reload.
+
+
 ## 0.10.0 — Stage 10.1 Overlay Engine & Dock
 
 - Added native Himothee Overlays dock.
