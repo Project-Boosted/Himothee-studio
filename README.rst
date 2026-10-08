@@ -14,7 +14,7 @@ Project Status
 
 Early development / pre-release.
 
-Current Himothee Studio development version: 0.10.0
+Current Himothee Studio development version: 0.10.1
 
 Underlying OBS baseline: OBS Studio 32.2.2
 (commit ba2f32bdf791005443988a4955e963663e16b1ed).
@@ -44,6 +44,8 @@ Current Features
 * Localhost transparent browser-source overlay engine.
 * Per-profile overlay persistence.
 * Show/Hide, Preview, Copy URL, and Create OBS Source controls.
+* Countdown, Stopwatch, Counter, Kill Counter, Streak Counter, Challenge Progress, and Stream Uptime widgets.
+* Live +1 / -1 / Reset counter controls and Start / Pause / Reset timer controls.
 
 Chat
 ----
@@ -71,9 +73,10 @@ v0.7 - Destination resilience and telemetry.
 v0.8 - Per-destination audio routing.
 v0.9.x - Runtime/RTMP compatibility hardening, native-chat removal, and live destination control audit.
 v0.10.0 - Stage 10.1 Overlay Engine + Himothee Overlays dock.
+v0.10.1 - Stage 10.2 Timers, counters, progress, and stream-uptime widgets.
 
-Next overlay stages add timers, counters, kill counters, darts widgets,
-themes/animations, hotkeys, Stream Deck actions, and automation.
+Next overlay stages add the visual designer, darts widgets, gaming presets,
+hotkeys, Stream Deck actions, and automation.
 
 Security
 --------
