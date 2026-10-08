@@ -58,8 +58,8 @@ jobs:
             'Media layer',
             'Choose Overlay Media'
           )) {
-            if (-not (Select-String -Path $dock -Pattern $pattern -SimpleMatch -Quiet)) {
-              throw "Overlay designer dock is missing: $pattern"
+            if (-not (Select-String -Path @($engine, $engineHeader, $dock) -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay designer implementation is missing: $pattern"
             }
           }
 
