@@ -2,6 +2,17 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.3 — Overlay startup lifecycle hotfix
+
+- Fixed a startup crash in the Stage 10 overlay system.
+- Removed profile loading from `HimotheeOverlayManager` construction.
+- Removed profile loading from `HimotheeOverlayDock` construction.
+- Overlay profile I/O now waits until OBS has initialized its active profile/configuration.
+- Added null/readiness guards around runtime profile access.
+- Added exception-safe profile loading/saving during startup and profile transitions.
+- The localhost overlay server can still start immediately because it does not depend on profile state.
+
+
 ## 0.10.2 — Stage 10.3 Overlay Designer
 
 - Added Himothee Dark, Minimal, Neon, Transparent, and Custom theme presets.
