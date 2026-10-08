@@ -13,22 +13,21 @@ ba2f32bdf791005443988a4955e963663e16b1ed.
 
 Current feature branch:
 
-- feature/gaming-widgets
+- feature/action-registry
 
 The earlier feature/unified-chat and feature/twitch-chat branches are
 experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.6**
+Version: **0.10.7**
 
-Focus: **Stage 10.5 — Gaming Widgets**.
+Focus: **Stage 10.6.1 — Himothee Action Registry**.
 
-The overlay engine now includes reusable K/D/A, Wins/Losses, Session Stats,
-round/attempt/death counters, and a free-text Personal Best display. Stage 10.5
-continues using the same localhost Browser Source runtime, designer, startup
-lifecycle guards, and automatic port fallback introduced in earlier Stage 10
-builds.
+A central internal command surface now owns the stable action contract for
+streaming, recording, Replay Buffer, scenes, audio, multistream, overlays,
+timers/counters, darts, and gaming controls. No external transport is exposed in
+10.6.1; the local Stream Deck bridge is the next stage.
 
 ## Development rules
 
