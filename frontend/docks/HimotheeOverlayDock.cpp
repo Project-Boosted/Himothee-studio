@@ -310,11 +310,10 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 
 void HimotheeOverlayDock::AddOverlay()
 {
-	if (!manager) {
+	if (!manager || !SaveChanges()) {
 		return;
 	}
 
-	StoreEditor();
 	const string id = manager->AddOverlay();
 	workingOverlays = manager->Overlays();
 	RebuildTree();
@@ -446,7 +445,7 @@ void HimotheeOverlayDock::CreateBrowserSource()
 		return;
 	}
 
-	OBSSceneItemAutoRelease sceneItem = obs_scene_add(scene, source);
+	OBSSceneItemAutoRelease sceneItem{obs_scene_add(scene, source)};
 	if (!sceneItem) {
 		QMessageBox::warning(this, QStringLiteral("Himothee Overlays"),
 				     QStringLiteral("Could not add the Browser Source to the current scene."));
