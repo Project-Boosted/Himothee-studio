@@ -22,6 +22,7 @@ class QWidget;
 class HimotheeOverlayDock : public OBSDock {
 public:
 	explicit HimotheeOverlayDock(OBSBasic *main);
+	HimotheeOverlayManager *GetManager() const noexcept { return manager.get(); }
 
 private:
 	OBSBasic *main = nullptr;
