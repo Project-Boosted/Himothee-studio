@@ -11,6 +11,7 @@ class OBSBasic;
 class QCheckBox;
 class QComboBox;
 class QLabel;
+class QDoubleSpinBox;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
@@ -54,6 +55,10 @@ private:
 	QCheckBox *mediaLoopCheck = nullptr;
 
 	QSpinBox *valueSpin = nullptr;
+	QDoubleSpinBox *averageSpin = nullptr;
+	QSpinBox *checkoutScoreSpin = nullptr;
+	QLineEdit *checkoutRouteEdit = nullptr;
+	QSpinBox *checkoutDurationSpin = nullptr;
 	QSpinBox *targetSpin = nullptr;
 	QSpinBox *durationSecondsSpin = nullptr;
 	QSpinBox *widthSpin = nullptr;
@@ -65,14 +70,21 @@ private:
 	QWidget *counterRowWidget = nullptr;
 	QWidget *targetRowWidget = nullptr;
 	QWidget *durationRowWidget = nullptr;
+	QWidget *averageRowWidget = nullptr;
+	QWidget *checkoutScoreRowWidget = nullptr;
+	QWidget *checkoutRouteRowWidget = nullptr;
+	QWidget *checkoutDurationRowWidget = nullptr;
 	QWidget *counterControlsWidget = nullptr;
 	QWidget *timerControlsWidget = nullptr;
+	QWidget *checkoutControlsWidget = nullptr;
 
 	QPushButton *decrementButton = nullptr;
 	QPushButton *incrementButton = nullptr;
 	QPushButton *resetCounterButton = nullptr;
 	QPushButton *startPauseTimerButton = nullptr;
 	QPushButton *resetTimerButton = nullptr;
+	QPushButton *triggerCheckoutButton = nullptr;
+	QPushButton *clearCheckoutButton = nullptr;
 
 	QPushButton *addButton = nullptr;
 	QPushButton *removeButton = nullptr;
@@ -105,6 +117,8 @@ private:
 	void ResetSelectedValue();
 	void ToggleSelectedTimer();
 	void ResetSelectedTimer();
+	void TriggerSelectedCheckout();
+	void ClearSelectedCheckout();
 	void PreviewSelected();
 	void CopySelectedUrl();
 	void CreateBrowserSource();
