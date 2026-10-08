@@ -39,10 +39,12 @@ private:
 	QComboBox *platformCombo = nullptr;
 	QLineEdit *nameEdit = nullptr;
 	QCheckBox *enabledCheck = nullptr;
+	QCheckBox *autoStartCheck = nullptr;
 	QComboBox *encoderModeCombo = nullptr;
 	QSpinBox *videoBitrateSpin = nullptr;
 	QSpinBox *audioBitrateSpin = nullptr;
 	QComboBox *audioTrackCombo = nullptr;
+	QLabel *inputResolutionLabel = nullptr;
 	QSpinBox *outputWidthSpin = nullptr;
 	QSpinBox *outputHeightSpin = nullptr;
 	QComboBox *reconnectPolicyCombo = nullptr;
@@ -59,6 +61,8 @@ private:
 	QPushButton *saveButton = nullptr;
 	QPushButton *reloadButton = nullptr;
 	QPushButton *streamButton = nullptr;
+	QPushButton *startAllEnabledButton = nullptr;
+	QPushButton *stopAllSecondariesButton = nullptr;
 	QPushButton *startSelectedButton = nullptr;
 	QPushButton *stopSelectedButton = nullptr;
 	QTimer *statusTimer = nullptr;
