@@ -639,6 +639,12 @@ void HimotheeOverlayDock::LoadEditor(int index)
 	checkoutRouteEdit->setText(QString::fromStdString(overlay.checkoutRoute));
 	checkoutDurationSpin->setValue(
 		static_cast<int>(clamp<int64_t>(overlay.notificationDurationMs / 1000, 1, 15)));
+	gamingKillsSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.gamingKills, 0, 999999)));
+	gamingDeathsSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.gamingDeaths, 0, 999999)));
+	gamingAssistsSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.gamingAssists, 0, 999999)));
+	gamingWinsSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.gamingWins, 0, 999999)));
+	gamingLossesSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.gamingLosses, 0, 999999)));
+	personalBestEdit->setText(QString::fromStdString(overlay.personalBest));
 	targetSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.target, 1, 999999)));
 	durationSecondsSpin->setValue(
 		static_cast<int>(clamp<int64_t>(overlay.durationMs / 1000, 1, 604800)));
@@ -701,6 +707,15 @@ void HimotheeOverlayDock::StoreEditor()
 	overlay.checkoutScore = checkoutScoreSpin->value();
 	overlay.checkoutRoute = checkoutRouteEdit->text().trimmed().toStdString();
 	overlay.notificationDurationMs = static_cast<int64_t>(checkoutDurationSpin->value()) * 1000;
+	overlay.gamingKills = gamingKillsSpin->value();
+	overlay.gamingDeaths = gamingDeathsSpin->value();
+	overlay.gamingAssists = gamingAssistsSpin->value();
+	overlay.gamingWins = gamingWinsSpin->value();
+	overlay.gamingLosses = gamingLossesSpin->value();
+	overlay.personalBest = personalBestEdit->text().trimmed().toStdString();
+	if (overlay.personalBest.empty()) {
+		overlay.personalBest = "PB";
+	}
 	overlay.target = targetSpin->value();
 	overlay.durationMs = static_cast<int64_t>(durationSecondsSpin->value()) * 1000;
 	overlay.theme = themeCombo->currentData().toString().toStdString();
@@ -726,6 +741,11 @@ void HimotheeOverlayDock::StoreEditor()
 	overlay.decimalValue = max(0.0, overlay.decimalValue);
 	overlay.checkoutScore = clamp<int64_t>(overlay.checkoutScore, 0, 170);
 	overlay.notificationDurationMs = clamp<int64_t>(overlay.notificationDurationMs, 1000, 15000);
+	overlay.gamingKills = max<int64_t>(0, overlay.gamingKills);
+	overlay.gamingDeaths = max<int64_t>(0, overlay.gamingDeaths);
+	overlay.gamingAssists = max<int64_t>(0, overlay.gamingAssists);
+	overlay.gamingWins = max<int64_t>(0, overlay.gamingWins);
+	overlay.gamingLosses = max<int64_t>(0, overlay.gamingLosses);
 
 	if (previousType != newType) {
 		overlay.running = false;
@@ -766,6 +786,12 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	checkoutScoreSpin->setEnabled(enabled);
 	checkoutRouteEdit->setEnabled(enabled);
 	checkoutDurationSpin->setEnabled(enabled);
+	gamingKillsSpin->setEnabled(enabled);
+	gamingDeathsSpin->setEnabled(enabled);
+	gamingAssistsSpin->setEnabled(enabled);
+	gamingWinsSpin->setEnabled(enabled);
+	gamingLossesSpin->setEnabled(enabled);
+	personalBestEdit->setEnabled(enabled);
 	targetSpin->setEnabled(enabled);
 	durationSecondsSpin->setEnabled(enabled);
 	themeCombo->setEnabled(enabled);
@@ -793,6 +819,7 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	counterControlsWidget->setEnabled(enabled);
 	timerControlsWidget->setEnabled(enabled);
 	checkoutControlsWidget->setEnabled(enabled);
+	gamingControlsWidget->setEnabled(enabled);
 	if (enabled) {
 		UpdateWidgetControls();
 	} else {
@@ -802,11 +829,18 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 		checkoutScoreRowWidget->setVisible(false);
 		checkoutRouteRowWidget->setVisible(false);
 		checkoutDurationRowWidget->setVisible(false);
+		gamingKillsRowWidget->setVisible(false);
+		gamingDeathsRowWidget->setVisible(false);
+		gamingAssistsRowWidget->setVisible(false);
+		gamingWinsRowWidget->setVisible(false);
+		gamingLossesRowWidget->setVisible(false);
+		personalBestRowWidget->setVisible(false);
 		targetRowWidget->setVisible(false);
 		durationRowWidget->setVisible(false);
 		counterControlsWidget->setVisible(false);
 		timerControlsWidget->setVisible(false);
 		checkoutControlsWidget->setVisible(false);
+		gamingControlsWidget->setVisible(false);
 		runtimeValueLabel->setText(QStringLiteral("-"));
 	}
 }
