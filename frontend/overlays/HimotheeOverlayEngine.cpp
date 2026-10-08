@@ -862,6 +862,16 @@ QString HimotheeOverlayManager::RuntimeDisplay(const HimotheeOverlayDefinition &
 		return FormatDuration(CurrentElapsedMs(overlay));
 	case HimotheeOverlayType::StreamUptime:
 		return FormatDuration(StreamUptimeMs());
+	case HimotheeOverlayType::Darts180:
+	case HimotheeOverlayType::Darts140Plus:
+	case HimotheeOverlayType::Darts100Plus:
+	case HimotheeOverlayType::DartsLegs:
+	case HimotheeOverlayType::DartsWins:
+		return QString::number(overlay.value);
+	case HimotheeOverlayType::DartsAverage:
+		return QString::number(overlay.decimalValue, 'f', 2);
+	case HimotheeOverlayType::DartsCheckout:
+		return overlay.checkoutScore > 0 ? QString::number(overlay.checkoutScore) : QStringLiteral("-");
 	case HimotheeOverlayType::Text:
 	default:
 		return QString::fromStdString(overlay.text);
@@ -1198,13 +1208,21 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 	object.insert(QStringLiteral("id"), QString::fromStdString(overlay.id));
 	object.insert(QStringLiteral("name"), QString::fromStdString(overlay.name));
 	object.insert(QStringLiteral("type"), QString::fromUtf8(HimotheeOverlayTypeId(overlay.type)));
-	object.insert(QStringLiteral("visible"), overlay.visible);
+	const bool runtimeVisible = overlay.type == HimotheeOverlayType::DartsCheckout
+					    ? overlay.visible && overlay.notificationUntilMs > NowMs()
+					    : overlay.visible;
+	object.insert(QStringLiteral("visible"), runtimeVisible);
+	object.insert(QStringLiteral("configured_visible"), overlay.visible);
 	object.insert(QStringLiteral("width"), static_cast<int>(overlay.width));
 	object.insert(QStringLiteral("height"), static_cast<int>(overlay.height));
 	object.insert(QStringLiteral("title"), QString::fromStdString(overlay.title));
 	object.insert(QStringLiteral("text"), QString::fromStdString(overlay.text));
 	object.insert(QStringLiteral("value"), static_cast<double>(overlay.value));
 	object.insert(QStringLiteral("target"), static_cast<double>(overlay.target));
+	object.insert(QStringLiteral("decimal_value"), overlay.decimalValue);
+	object.insert(QStringLiteral("checkout_score"), static_cast<double>(overlay.checkoutScore));
+	object.insert(QStringLiteral("checkout_route"), QString::fromStdString(overlay.checkoutRoute));
+	object.insert(QStringLiteral("notification_duration_ms"), static_cast<double>(overlay.notificationDurationMs));
 	object.insert(QStringLiteral("running"), overlay.running);
 	object.insert(QStringLiteral("display"), RuntimeDisplay(overlay));
 	object.insert(QStringLiteral("theme"), QString::fromStdString(overlay.theme));
@@ -1254,6 +1272,10 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 	} else if (overlay.type == HimotheeOverlayType::StreamUptime) {
 		runtimeMs = StreamUptimeMs();
 		meta = streamWasActive ? QStringLiteral("LIVE") : QStringLiteral("OFFLINE");
+	} else if (overlay.type == HimotheeOverlayType::DartsCheckout) {
+		meta = QString::fromStdString(overlay.checkoutRoute);
+	} else if (overlay.type == HimotheeOverlayType::DartsAverage) {
+		meta = QStringLiteral("3-DART AVG");
 	}
 
 	object.insert(QStringLiteral("meta"), meta);
