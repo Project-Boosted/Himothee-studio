@@ -48,6 +48,7 @@ extern volatile bool recording_paused;
 
 class ColorSelect;
 class HimotheeActionRegistry;
+class HimotheeControlBridge;
 class HimotheeMultistreamDock;
 class HimotheeOverlayDock;
 class HimotheeOverlayManager;
@@ -458,6 +459,7 @@ private:
 	QPointer<HimotheeMultistreamDock> himotheeMultistreamDock;
 	QPointer<HimotheeOverlayDock> himotheeOverlayDock;
 	std::unique_ptr<HimotheeActionRegistry> himotheeActionRegistry;
+	std::unique_ptr<HimotheeControlBridge> himotheeControlBridge;
 
 public:
 	HimotheeActionRegistry *GetHimotheeActionRegistry() const noexcept { return himotheeActionRegistry.get(); }
