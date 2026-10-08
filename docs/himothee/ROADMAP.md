@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.9.5**
+Current development version: **0.9.6**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -64,13 +64,19 @@ Botrix Multi Chat through OBS/Himothee Custom Browser Docks.
 - Shared-video plus dedicated-audio path.
 - Per-destination audio bitrate.
 
-### v0.9.x — Runtime compatibility hardening — Current
+### v0.9.x — Runtime compatibility and control hardening — Current
 
 - Startup config-order hotfix.
 - Visible destination diagnostics.
 - Enhanced Broadcasting/shared-encoder conflict reporting.
 - Platform-safe H.264 selection for Twitch/Kick secondary RTMP.
 - Kick-safe limits and duplicate-primary-key detection.
+- Separate Destination Enabled from Auto-start.
+- Prepare enabled destinations without forcing them live.
+- Go Live Selected / End Selected controls.
+- Go Live Enabled / End Secondaries controls.
+- Explicit shared OBS Input resolution and per-destination Output resolution status.
+- Independent destination scaling for mixed-resolution streaming.
 - Removed the experimental native chat implementation.
 - Standardised chat on Botrix Multi Chat through Custom Browser Docks.
 
