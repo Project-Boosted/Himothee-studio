@@ -85,6 +85,20 @@ const char *HimotheeOverlayTypeId(HimotheeOverlayType type)
 		return "darts_average";
 	case HimotheeOverlayType::DartsCheckout:
 		return "darts_checkout";
+	case HimotheeOverlayType::GamingKDA:
+		return "gaming_kda";
+	case HimotheeOverlayType::GamingWinsLosses:
+		return "gaming_wins_losses";
+	case HimotheeOverlayType::GamingRound:
+		return "gaming_round";
+	case HimotheeOverlayType::GamingAttempts:
+		return "gaming_attempts";
+	case HimotheeOverlayType::GamingDeaths:
+		return "gaming_deaths";
+	case HimotheeOverlayType::GamingPersonalBest:
+		return "gaming_personal_best";
+	case HimotheeOverlayType::GamingSessionStats:
+		return "gaming_session_stats";
 	case HimotheeOverlayType::Text:
 	default:
 		return "text";
@@ -122,6 +136,20 @@ QString HimotheeOverlayTypeName(HimotheeOverlayType type)
 		return QStringLiteral("Darts Average");
 	case HimotheeOverlayType::DartsCheckout:
 		return QStringLiteral("Darts Checkout");
+	case HimotheeOverlayType::GamingKDA:
+		return QStringLiteral("Gaming K/D/A");
+	case HimotheeOverlayType::GamingWinsLosses:
+		return QStringLiteral("Gaming Wins / Losses");
+	case HimotheeOverlayType::GamingRound:
+		return QStringLiteral("Gaming Round");
+	case HimotheeOverlayType::GamingAttempts:
+		return QStringLiteral("Gaming Attempts");
+	case HimotheeOverlayType::GamingDeaths:
+		return QStringLiteral("Gaming Deaths");
+	case HimotheeOverlayType::GamingPersonalBest:
+		return QStringLiteral("Gaming Personal Best");
+	case HimotheeOverlayType::GamingSessionStats:
+		return QStringLiteral("Gaming Session Stats");
 	case HimotheeOverlayType::Text:
 	default:
 		return QStringLiteral("Text");
@@ -161,6 +189,13 @@ HimotheeOverlayType HimotheeOverlayTypeFromId(const char *type)
 	if (astrcmpi(type, "darts_wins") == 0) return HimotheeOverlayType::DartsWins;
 	if (astrcmpi(type, "darts_average") == 0) return HimotheeOverlayType::DartsAverage;
 	if (astrcmpi(type, "darts_checkout") == 0) return HimotheeOverlayType::DartsCheckout;
+	if (astrcmpi(type, "gaming_kda") == 0) return HimotheeOverlayType::GamingKDA;
+	if (astrcmpi(type, "gaming_wins_losses") == 0) return HimotheeOverlayType::GamingWinsLosses;
+	if (astrcmpi(type, "gaming_round") == 0) return HimotheeOverlayType::GamingRound;
+	if (astrcmpi(type, "gaming_attempts") == 0) return HimotheeOverlayType::GamingAttempts;
+	if (astrcmpi(type, "gaming_deaths") == 0) return HimotheeOverlayType::GamingDeaths;
+	if (astrcmpi(type, "gaming_personal_best") == 0) return HimotheeOverlayType::GamingPersonalBest;
+	if (astrcmpi(type, "gaming_session_stats") == 0) return HimotheeOverlayType::GamingSessionStats;
 	return HimotheeOverlayType::Text;
 }
 
@@ -170,7 +205,8 @@ bool HimotheeOverlayIsCounter(HimotheeOverlayType type)
 	       type == HimotheeOverlayType::StreakCounter || type == HimotheeOverlayType::Progress ||
 	       type == HimotheeOverlayType::Darts180 || type == HimotheeOverlayType::Darts140Plus ||
 	       type == HimotheeOverlayType::Darts100Plus || type == HimotheeOverlayType::DartsLegs ||
-	       type == HimotheeOverlayType::DartsWins;
+	       type == HimotheeOverlayType::DartsWins || type == HimotheeOverlayType::GamingRound ||
+	       type == HimotheeOverlayType::GamingAttempts || type == HimotheeOverlayType::GamingDeaths;
 }
 
 bool HimotheeOverlayIsDarts(HimotheeOverlayType type)
@@ -179,6 +215,14 @@ bool HimotheeOverlayIsDarts(HimotheeOverlayType type)
 	       type == HimotheeOverlayType::Darts100Plus || type == HimotheeOverlayType::DartsLegs ||
 	       type == HimotheeOverlayType::DartsWins || type == HimotheeOverlayType::DartsAverage ||
 	       type == HimotheeOverlayType::DartsCheckout;
+}
+
+bool HimotheeOverlayIsGaming(HimotheeOverlayType type)
+{
+	return type == HimotheeOverlayType::GamingKDA || type == HimotheeOverlayType::GamingWinsLosses ||
+	       type == HimotheeOverlayType::GamingRound || type == HimotheeOverlayType::GamingAttempts ||
+	       type == HimotheeOverlayType::GamingDeaths || type == HimotheeOverlayType::GamingPersonalBest ||
+	       type == HimotheeOverlayType::GamingSessionStats;
 }
 
 bool HimotheeOverlayIsTimer(HimotheeOverlayType type)
