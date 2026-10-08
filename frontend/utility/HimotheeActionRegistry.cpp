@@ -5,6 +5,9 @@
 #include <utility/HimotheeMultistream.hpp>
 #include <widgets/OBSBasic.hpp>
 
+#include <obs-frontend-api.h>
+#include <obs.hpp>
+
 #include <QApplication>
 #include <QJsonDocument>
 #include <QThread>
@@ -99,6 +102,20 @@ void HimotheeActionRegistry::RegisterBuiltInActions()
 		 QStringLiteral("Start or stop the replay buffer."), {}},
 		{QStringLiteral("replay.save"), QStringLiteral("Save Replay"), QStringLiteral("Replay Buffer"),
 		 QStringLiteral("Save the current replay buffer."), {}},
+
+		{QStringLiteral("scene.switch"), QStringLiteral("Switch Scene"), QStringLiteral("Scenes"),
+		 QStringLiteral("Switch the current OBS scene by name."),
+		 Params({{QStringLiteral("scene"), Param(QStringLiteral("string"), true, QStringLiteral("Scene name."))}})},
+
+		{QStringLiteral("audio.mute"), QStringLiteral("Mute Source"), QStringLiteral("Audio"),
+		 QStringLiteral("Mute an OBS source by name."),
+		 Params({{QStringLiteral("source"), Param(QStringLiteral("string"), true, QStringLiteral("OBS source name."))}})},
+		{QStringLiteral("audio.unmute"), QStringLiteral("Unmute Source"), QStringLiteral("Audio"),
+		 QStringLiteral("Unmute an OBS source by name."),
+		 Params({{QStringLiteral("source"), Param(QStringLiteral("string"), true, QStringLiteral("OBS source name."))}})},
+		{QStringLiteral("audio.toggle"), QStringLiteral("Toggle Source Mute"), QStringLiteral("Audio"),
+		 QStringLiteral("Toggle mute on an OBS source by name."),
+		 Params({{QStringLiteral("source"), Param(QStringLiteral("string"), true, QStringLiteral("OBS source name."))}})},
 
 		{QStringLiteral("destination.start"), QStringLiteral("Start Destination"), QStringLiteral("Multistream"),
 		 QStringLiteral("Start one prepared Himothee multistream destination."),
@@ -226,6 +243,10 @@ QJsonObject HimotheeActionRegistry::StateSnapshot() const
 	state.insert(QStringLiteral("recording"), main->RecordingActive());
 	state.insert(QStringLiteral("replay_buffer"), main->ReplayBufferActive());
 
+	OBSSourceAutoRelease currentScene = obs_frontend_get_current_scene();
+	state.insert(QStringLiteral("scene"), currentScene ? QString::fromUtf8(obs_source_get_name(currentScene))
+							   : QString());
+
 	QJsonArray destinations;
 	if (auto *manager = main->GetHimotheeMultistreamManager()) {
 		for (const auto &status : manager->Status()) {
@@ -273,6 +294,8 @@ HimotheeActionResult HimotheeActionRegistry::Execute(const QString &actionId, co
 	if (actionId.startsWith(QStringLiteral("stream."))) return ExecuteStream(actionId);
 	if (actionId.startsWith(QStringLiteral("record."))) return ExecuteRecording(actionId);
 	if (actionId.startsWith(QStringLiteral("replay."))) return ExecuteReplayBuffer(actionId);
+	if (actionId.startsWith(QStringLiteral("scene."))) return ExecuteScene(actionId, params);
+	if (actionId.startsWith(QStringLiteral("audio."))) return ExecuteAudio(actionId, params);
 	if (actionId.startsWith(QStringLiteral("destination."))) return ExecuteDestination(actionId, params);
 	if (actionId.startsWith(QStringLiteral("overlay."))) return ExecuteOverlay(actionId, params);
 	if (actionId.startsWith(QStringLiteral("counter."))) return ExecuteCounter(actionId, params);
@@ -343,6 +366,53 @@ HimotheeActionResult HimotheeActionRegistry::ExecuteReplayBuffer(const QString &
 		return Ok(QStringLiteral("Replay save requested."));
 	}
 	return Fail(QStringLiteral("unknown_action"), QStringLiteral("Unknown replay-buffer action."));
+}
+
+HimotheeActionResult HimotheeActionRegistry::ExecuteScene(const QString &actionId, const QJsonObject &params)
+{
+	if (actionId != QStringLiteral("scene.switch")) {
+		return Fail(QStringLiteral("unknown_action"), QStringLiteral("Unknown scene action."));
+	}
+
+	const QString sceneName = RequiredString(params, QStringLiteral("scene"));
+	if (sceneName.isEmpty()) {
+		return Fail(QStringLiteral("missing_parameter"), QStringLiteral("scene is required."));
+	}
+
+	OBSSourceAutoRelease source = obs_get_source_by_name(sceneName.toUtf8().constData());
+	if (!source || !obs_scene_from_source(source)) {
+		return Fail(QStringLiteral("scene_not_found"), QStringLiteral("OBS scene was not found."));
+	}
+
+	obs_frontend_set_current_scene(source);
+	QJsonObject data;
+	data.insert(QStringLiteral("scene"), sceneName);
+	return Ok(QStringLiteral("Scene switched."), data);
+}
+
+HimotheeActionResult HimotheeActionRegistry::ExecuteAudio(const QString &actionId, const QJsonObject &params)
+{
+	const QString sourceName = RequiredString(params, QStringLiteral("source"));
+	if (sourceName.isEmpty()) {
+		return Fail(QStringLiteral("missing_parameter"), QStringLiteral("source is required."));
+	}
+
+	OBSSourceAutoRelease source = obs_get_source_by_name(sourceName.toUtf8().constData());
+	if (!source) {
+		return Fail(QStringLiteral("source_not_found"), QStringLiteral("OBS source was not found."));
+	}
+
+	bool muted = obs_source_muted(source);
+	if (actionId == QStringLiteral("audio.mute")) muted = true;
+	else if (actionId == QStringLiteral("audio.unmute")) muted = false;
+	else if (actionId == QStringLiteral("audio.toggle")) muted = !muted;
+	else return Fail(QStringLiteral("unknown_action"), QStringLiteral("Unknown audio action."));
+
+	obs_source_set_muted(source, muted);
+	QJsonObject data;
+	data.insert(QStringLiteral("source"), sourceName);
+	data.insert(QStringLiteral("muted"), muted);
+	return Ok(muted ? QStringLiteral("Source muted.") : QStringLiteral("Source unmuted."), data);
 }
 
 HimotheeActionResult HimotheeActionRegistry::ExecuteDestination(const QString &actionId, const QJsonObject &params)
