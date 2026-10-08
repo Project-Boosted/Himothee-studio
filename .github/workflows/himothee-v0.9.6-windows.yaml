@@ -1,0 +1,90 @@
+name: Himothee v0.9.6 - Multistream Control Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/multistream-control-audit
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 multistream controls
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout multistream control branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify control and resolution implementation
+        run: |
+          $manager = "$Env:GITHUB_WORKSPACE\frontend\utility\HimotheeMultistream.cpp"
+          $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeMultistreamDock.cpp"
+
+          foreach ($pattern in @(
+            'auto_start',
+            'StartAllEnabled',
+            'AutoStartCount',
+            'status.inputWidth',
+            'status.outputWidth'
+          )) {
+            if (-not (Select-String -Path $manager -Pattern $pattern -Quiet)) {
+              throw "Multistream manager audit is missing: $pattern"
+            }
+          }
+
+          foreach ($pattern in @(
+            'Destination enabled',
+            'Go live automatically with primary stream',
+            'Go Live Enabled',
+            'Go Live Selected',
+            'OBS encoder input',
+            'Output width',
+            'Output height'
+          )) {
+            if (-not (Select-String -Path $dock -Pattern $pattern -Quiet)) {
+              throw "Multistream control UI is missing: $pattern"
+            }
+          }
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.9.6 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.9.6') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.9.6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.9.6-Multistream-Control-Audit-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
