@@ -31,21 +31,6 @@ static Auth::Def twitchDef = {"Twitch", Auth::Type::OAuth_StreamKey};
 
 /* ------------------------------------------------------------------------- */
 
-std::string TwitchAuth::ClientId()
-{
-	std::string clientId = TWITCH_CLIENTID;
-	if (!clientId.empty()) {
-		deobfuscate_str(&clientId[0], TWITCH_HASH);
-	}
-	return clientId;
-}
-
-bool TwitchAuth::RefreshAccessToken()
-{
-	const std::string clientId = ClientId();
-	return !clientId.empty() && GetToken(TWITCH_TOKEN_URL, clientId, TWITCH_SCOPE_VERSION);
-}
-
 TwitchAuth::TwitchAuth(const Def &d) : OAuthStreamKey(d)
 {
 	if (!cef) {
