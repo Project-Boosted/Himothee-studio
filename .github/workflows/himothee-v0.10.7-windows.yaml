@@ -1,0 +1,125 @@
+name: Himothee v0.10.7 - Action Registry
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/action-registry
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 action registry
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout action-registry branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify Stage 10.6.1 action registry
+        run: |
+          $registry = "$Env:GITHUB_WORKSPACE\frontend\utility\HimotheeActionRegistry.cpp"
+          $header = "$Env:GITHUB_WORKSPACE\frontend\utility\HimotheeActionRegistry.hpp"
+          $obsBasic = "$Env:GITHUB_WORKSPACE\frontend\widgets\OBSBasic.cpp"
+
+          foreach ($pattern in @(
+            'stream.start',
+            'stream.stop',
+            'record.start',
+            'replay.save',
+            'scene.switch',
+            'audio.toggle',
+            'destination.start',
+            'destination.start_all',
+            'overlay.toggle',
+            'counter.increment',
+            'timer.start',
+            'darts.average.set',
+            'darts.checkout.trigger',
+            'gaming.stat.increment',
+            'gaming.pb.set',
+            'ActionsJson',
+            'StateSnapshot'
+          )) {
+            if (-not (Select-String -Path @($registry, $header) -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Himothee Action Registry is missing: $pattern"
+            }
+          }
+
+          foreach ($pattern in @(
+            'std::make_unique<HimotheeActionRegistry>(this)',
+            'GetHimotheeOverlayManager'
+          )) {
+            if (-not (Select-String -Path $obsBasic -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "OBSBasic action-registry integration is missing: $pattern"
+            }
+          }
+
+      - name: Verify action registry lifecycle and transport boundary
+        run: |
+          $registry = Get-Content "$Env:GITHUB_WORKSPACE\frontend\utility\HimotheeActionRegistry.cpp" -Raw
+
+          $ctor = [regex]::Match(
+            $registry,
+            'HimotheeActionRegistry::HimotheeActionRegistry[\s\S]*?void HimotheeActionRegistry::RegisterBuiltInActions'
+          ).Value
+
+          if ($ctor -match 'GetCurrentProfile\(' -or
+              $ctor -match 'StateSnapshot\(' -or
+              $ctor -match 'Execute\(') {
+            throw 'Action registry constructor performs runtime/profile work too early.'
+          }
+
+          if ($registry -notmatch 'main->Config\(\)') {
+            throw 'Action registry OBS readiness guard is missing.'
+          }
+
+          if ($registry -notmatch 'wrong_thread') {
+            throw 'Action registry UI-thread guard is missing.'
+          }
+
+          if ($registry -match 'QTcpServer|QWebSocketServer|listen\(') {
+            throw 'Stage 10.6.1 must not expose a new network transport.'
+          }
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.10.7 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.10.7') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.10.7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.10.7-Action-Registry-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
