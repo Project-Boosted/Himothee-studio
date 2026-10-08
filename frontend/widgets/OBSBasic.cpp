@@ -31,6 +31,7 @@
 #include <docks/YouTubeAppDock.hpp>
 #endif
 #include <docks/HimotheeMultistreamDock.hpp>
+#include <docks/HimotheeOverlayDock.hpp>
 #include <dialogs/NameDialog.hpp>
 #include <dialogs/OBSAbout.hpp>
 #include <dialogs/OBSBasicAdvAudio.hpp>
@@ -379,6 +380,10 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	himotheeMultistreamDock = new HimotheeMultistreamDock(this);
 	addDockWidget(Qt::RightDockWidgetArea, himotheeMultistreamDock);
 
+	himotheeOverlayDock = new HimotheeOverlayDock(this);
+	addDockWidget(Qt::RightDockWidgetArea, himotheeOverlayDock);
+	tabifyDockWidget(himotheeMultistreamDock, himotheeOverlayDock);
+
 	copyActionsDynamicProperties();
 
 	qRegisterMetaType<int64_t>("int64_t");
@@ -540,6 +545,7 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	SETUP_DOCK(controlsDock);
 	SETUP_DOCK(statsDock);
 	SETUP_DOCK(himotheeMultistreamDock);
+	SETUP_DOCK(himotheeOverlayDock);
 #undef SETUP_DOCK
 
 	// Register shortcuts for Undo/Redo
