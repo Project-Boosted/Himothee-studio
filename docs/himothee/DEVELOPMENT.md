@@ -20,7 +20,7 @@ experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.4**
+Version: **0.10.5**
 
 Focus: **Stage 10.4 — Darts Widgets**.
 
