@@ -238,7 +238,12 @@ QJsonObject HimotheeActionRegistry::StateSnapshot() const
 		return state;
 	}
 
-	state.insert(QStringLiteral("ready"), main->Config() != nullptr);
+	const bool ready = main->Config() != nullptr;
+	state.insert(QStringLiteral("ready"), ready);
+	if (!ready) {
+		return state;
+	}
+
 	state.insert(QStringLiteral("streaming"), main->StreamingActive());
 	state.insert(QStringLiteral("recording"), main->RecordingActive());
 	state.insert(QStringLiteral("replay_buffer"), main->ReplayBufferActive());
@@ -283,8 +288,9 @@ QJsonObject HimotheeActionRegistry::StateSnapshot() const
 
 HimotheeActionResult HimotheeActionRegistry::Execute(const QString &actionId, const QJsonObject &params)
 {
-	if (!main) {
-		return Fail(QStringLiteral("not_ready"), QStringLiteral("Himothee Studio is not ready."));
+	if (!main || !main->Config()) {
+		return Fail(QStringLiteral("not_ready"),
+			    QStringLiteral("Himothee Studio has not finished loading its active profile yet."));
 	}
 	if (QApplication::instance() && QThread::currentThread() != QApplication::instance()->thread()) {
 		return Fail(QStringLiteral("wrong_thread"),
