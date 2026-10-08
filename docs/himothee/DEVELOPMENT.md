@@ -13,20 +13,21 @@ ba2f32bdf791005443988a4955e963663e16b1ed.
 
 Current feature branch:
 
-- feature/overlay-widgets
+- feature/overlay-designer
 
 The earlier feature/unified-chat and feature/twitch-chat branches are
 experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.1**
+Version: **0.10.2**
 
-Focus: **Stage 10.2 — Timers & Counters**.
+Focus: **Stage 10.3 — Overlay Designer**.
 
-The overlay engine uses a localhost-only HTTP renderer and normal OBS Browser
-Sources. Stage 10.2 adds counter/timer runtime state while retaining per-profile
-persistence and backward compatibility with Stage 10.1 Text overlays.
+The overlay engine now persists visual design settings and can serve local
+image/GIF/video media through its localhost-only HTTP service. Existing Text,
+Timer, Counter, Progress, and Uptime widgets remain on the same stable browser
+URLs.
 
 ## Development rules
 
