@@ -8,11 +8,13 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QClipboard>
+#include <QComboBox>
 #include <QDesktopServices>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHeaderView>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -29,14 +31,23 @@ using namespace std;
 
 namespace {
 
-QString TypeText(HimotheeOverlayType)
-{
-	return QStringLiteral("Text");
-}
-
 QString SizeText(const HimotheeOverlayDefinition &overlay)
 {
 	return QStringLiteral("%1x%2").arg(overlay.width).arg(overlay.height);
+}
+
+QWidget *MakeFormRow(QWidget *parent, const QString &labelText, QWidget *field)
+{
+	auto *row = new QWidget(parent);
+	auto *layout = new QHBoxLayout(row);
+	layout->setContentsMargins(0, 0, 0, 0);
+	layout->setSpacing(8);
+
+	auto *label = new QLabel(labelText, row);
+	label->setMinimumWidth(105);
+	layout->addWidget(label);
+	layout->addWidget(field, 1);
+	return row;
 }
 
 } // namespace
@@ -52,7 +63,7 @@ HimotheeOverlayDock::HimotheeOverlayDock(OBSBasic *main_) : OBSDock(main_), main
 	ReloadFromManager();
 
 	refreshTimer = new QTimer(this);
-	refreshTimer->setInterval(750);
+	refreshTimer->setInterval(250);
 	connect(refreshTimer, &QTimer::timeout, this, [this]() { Refresh(); });
 	refreshTimer->start();
 }
@@ -69,16 +80,16 @@ void HimotheeOverlayDock::BuildUi()
 	layout->addWidget(serverLabel);
 
 	overlayTree = new QTreeWidget(root);
-	overlayTree->setColumnCount(4);
+	overlayTree->setColumnCount(5);
 	overlayTree->setHeaderLabels({QStringLiteral("Overlay"), QStringLiteral("Type"), QStringLiteral("Visible"),
-				     QStringLiteral("Size")});
+				     QStringLiteral("Live"), QStringLiteral("Size")});
 	overlayTree->setRootIsDecorated(false);
 	overlayTree->setAlternatingRowColors(true);
 	overlayTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	overlayTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	overlayTree->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-	overlayTree->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-	overlayTree->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+	for (int column = 1; column < 5; column++) {
+		overlayTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
+	}
 	layout->addWidget(overlayTree, 1);
 
 	connect(overlayTree, &QTreeWidget::itemSelectionChanged, this, [this]() {
@@ -93,22 +104,52 @@ void HimotheeOverlayDock::BuildUi()
 		LoadEditor(currentIndex);
 	});
 
-	auto *editorGroup = new QGroupBox(QStringLiteral("Overlay Settings"), root);
+	auto *editorGroup = new QGroupBox(QStringLiteral("Widget Settings"), root);
 	auto *form = new QFormLayout(editorGroup);
 
 	nameEdit = new QLineEdit(editorGroup);
 	form->addRow(QStringLiteral("Name"), nameEdit);
 
+	typeCombo = new QComboBox(editorGroup);
+	typeCombo->addItem(QStringLiteral("Text"), static_cast<int>(HimotheeOverlayType::Text));
+	typeCombo->addItem(QStringLiteral("Counter"), static_cast<int>(HimotheeOverlayType::Counter));
+	typeCombo->addItem(QStringLiteral("Kill Counter"), static_cast<int>(HimotheeOverlayType::KillCounter));
+	typeCombo->addItem(QStringLiteral("Streak Counter"), static_cast<int>(HimotheeOverlayType::StreakCounter));
+	typeCombo->addItem(QStringLiteral("Challenge Progress"), static_cast<int>(HimotheeOverlayType::Progress));
+	typeCombo->addItem(QStringLiteral("Countdown"), static_cast<int>(HimotheeOverlayType::Countdown));
+	typeCombo->addItem(QStringLiteral("Stopwatch"), static_cast<int>(HimotheeOverlayType::Stopwatch));
+	typeCombo->addItem(QStringLiteral("Stream Uptime"), static_cast<int>(HimotheeOverlayType::StreamUptime));
+	form->addRow(QStringLiteral("Type"), typeCombo);
+
 	visibleCheck = new QCheckBox(QStringLiteral("Overlay visible"), editorGroup);
 	form->addRow(QString(), visibleCheck);
 
 	titleEdit = new QLineEdit(editorGroup);
-	titleEdit->setPlaceholderText(QStringLiteral("Overlay title"));
+	titleEdit->setPlaceholderText(QStringLiteral("Displayed title"));
 	form->addRow(QStringLiteral("Title"), titleEdit);
 
 	textEdit = new QLineEdit(editorGroup);
 	textEdit->setPlaceholderText(QStringLiteral("Text/value"));
-	form->addRow(QStringLiteral("Text"), textEdit);
+	textRowWidget = MakeFormRow(editorGroup, QStringLiteral("Text"), textEdit);
+	form->addRow(textRowWidget);
+
+	valueSpin = new QSpinBox(editorGroup);
+	valueSpin->setRange(-999999, 999999);
+	counterRowWidget = MakeFormRow(editorGroup, QStringLiteral("Value"), valueSpin);
+	form->addRow(counterRowWidget);
+
+	targetSpin = new QSpinBox(editorGroup);
+	targetSpin->setRange(1, 999999);
+	targetSpin->setValue(100);
+	targetRowWidget = MakeFormRow(editorGroup, QStringLiteral("Target"), targetSpin);
+	form->addRow(targetRowWidget);
+
+	durationSecondsSpin = new QSpinBox(editorGroup);
+	durationSecondsSpin->setRange(1, 604800);
+	durationSecondsSpin->setValue(300);
+	durationSecondsSpin->setSuffix(QStringLiteral(" sec"));
+	durationRowWidget = MakeFormRow(editorGroup, QStringLiteral("Duration"), durationSecondsSpin);
+	form->addRow(durationRowWidget);
 
 	widthSpin = new QSpinBox(editorGroup);
 	widthSpin->setRange(320, 7680);
@@ -125,10 +166,38 @@ void HimotheeOverlayDock::BuildUi()
 	urlLabel->setWordWrap(true);
 	form->addRow(QStringLiteral("Browser URL"), urlLabel);
 
+	runtimeValueLabel = new QLabel(QStringLiteral("-"), editorGroup);
+	runtimeValueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+	form->addRow(QStringLiteral("Live value"), runtimeValueLabel);
+
 	layout->addWidget(editorGroup);
 
+	counterControlsWidget = new QWidget(root);
+	auto *counterControls = new QHBoxLayout(counterControlsWidget);
+	counterControls->setContentsMargins(0, 0, 0, 0);
+	counterControls->addWidget(new QLabel(QStringLiteral("Counter"), counterControlsWidget));
+	decrementButton = new QPushButton(QStringLiteral("-1"), counterControlsWidget);
+	incrementButton = new QPushButton(QStringLiteral("+1"), counterControlsWidget);
+	resetCounterButton = new QPushButton(QStringLiteral("Reset"), counterControlsWidget);
+	counterControls->addWidget(decrementButton);
+	counterControls->addWidget(incrementButton);
+	counterControls->addWidget(resetCounterButton);
+	counterControls->addStretch(1);
+	layout->addWidget(counterControlsWidget);
+
+	timerControlsWidget = new QWidget(root);
+	auto *timerControls = new QHBoxLayout(timerControlsWidget);
+	timerControls->setContentsMargins(0, 0, 0, 0);
+	timerControls->addWidget(new QLabel(QStringLiteral("Timer"), timerControlsWidget));
+	startPauseTimerButton = new QPushButton(QStringLiteral("Start"), timerControlsWidget);
+	resetTimerButton = new QPushButton(QStringLiteral("Reset"), timerControlsWidget);
+	timerControls->addWidget(startPauseTimerButton);
+	timerControls->addWidget(resetTimerButton);
+	timerControls->addStretch(1);
+	layout->addWidget(timerControlsWidget);
+
 	auto *editButtons = new QHBoxLayout();
-	addButton = new QPushButton(QStringLiteral("New Overlay"), root);
+	addButton = new QPushButton(QStringLiteral("New Widget"), root);
 	removeButton = new QPushButton(QStringLiteral("Delete"), root);
 	saveButton = new QPushButton(QStringLiteral("Save"), root);
 	editButtons->addWidget(addButton);
@@ -148,10 +217,23 @@ void HimotheeOverlayDock::BuildUi()
 	actionButtons->addWidget(createSourceButton);
 	layout->addLayout(actionButtons);
 
+	connect(typeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (updatingEditor) {
+			return;
+		}
+		StoreEditor();
+		UpdateWidgetControls();
+		UpdateTreeRow(currentIndex);
+	});
 	connect(addButton, &QPushButton::clicked, this, [this]() { AddOverlay(); });
 	connect(removeButton, &QPushButton::clicked, this, [this]() { RemoveSelected(); });
 	connect(saveButton, &QPushButton::clicked, this, [this]() { SaveChanges(); });
 	connect(showHideButton, &QPushButton::clicked, this, [this]() { ToggleSelectedVisibility(); });
+	connect(decrementButton, &QPushButton::clicked, this, [this]() { AdjustSelectedValue(-1); });
+	connect(incrementButton, &QPushButton::clicked, this, [this]() { AdjustSelectedValue(1); });
+	connect(resetCounterButton, &QPushButton::clicked, this, [this]() { ResetSelectedValue(); });
+	connect(startPauseTimerButton, &QPushButton::clicked, this, [this]() { ToggleSelectedTimer(); });
+	connect(resetTimerButton, &QPushButton::clicked, this, [this]() { ResetSelectedTimer(); });
 	connect(previewButton, &QPushButton::clicked, this, [this]() { PreviewSelected(); });
 	connect(copyUrlButton, &QPushButton::clicked, this, [this]() { CopySelectedUrl(); });
 	connect(createSourceButton, &QPushButton::clicked, this, [this]() { CreateBrowserSource(); });
@@ -170,6 +252,7 @@ void HimotheeOverlayDock::Refresh()
 	if (currentProfilePath != loadedProfilePath) {
 		manager->LoadForCurrentProfile();
 		ReloadFromManager();
+		return;
 	}
 
 	if (!manager->ServerRunning()) {
@@ -177,7 +260,7 @@ void HimotheeOverlayDock::Refresh()
 	}
 
 	if (manager->ServerRunning()) {
-		serverLabel->setText(QStringLiteral("Overlay server: %1  |  Overlays: %2")
+		serverLabel->setText(QStringLiteral("Overlay server: %1  |  Widgets: %2")
 					     .arg(manager->BaseUrl())
 					     .arg(manager->Overlays().size()));
 	} else {
@@ -185,12 +268,27 @@ void HimotheeOverlayDock::Refresh()
 					     .arg(QString::fromStdString(manager->ServerError())));
 	}
 
+	for (int row = 0; row < overlayTree->topLevelItemCount(); row++) {
+		auto *item = overlayTree->topLevelItem(row);
+		if (!item) {
+			continue;
+		}
+		const string id = item->data(0, Qt::UserRole + 1).toString().toStdString();
+		item->setText(3, manager->RuntimeDisplay(id));
+	}
+
 	const bool selected = currentIndex >= 0 && currentIndex < static_cast<int>(workingOverlays.size());
 	if (selected) {
-		showHideButton->setText(workingOverlays[static_cast<size_t>(currentIndex)].visible
-					    ? QStringLiteral("Hide")
-					    : QStringLiteral("Show"));
+		const auto &overlay = workingOverlays[static_cast<size_t>(currentIndex)];
+		showHideButton->setText(overlay.visible ? QStringLiteral("Hide") : QStringLiteral("Show"));
+		runtimeValueLabel->setText(manager->RuntimeDisplay(overlay.id));
+
+		const auto *liveOverlay = manager->Find(overlay.id);
+		if (liveOverlay && HimotheeOverlayIsTimer(liveOverlay->type)) {
+			startPauseTimerButton->setText(liveOverlay->running ? QStringLiteral("Pause") : QStringLiteral("Start"));
+		}
 	}
+
 	previewButton->setEnabled(selected && manager->ServerRunning());
 	copyUrlButton->setEnabled(selected && manager->ServerRunning());
 	createSourceButton->setEnabled(selected && manager->ServerRunning());
@@ -217,6 +315,34 @@ void HimotheeOverlayDock::ReloadFromManager()
 	Refresh();
 }
 
+void HimotheeOverlayDock::SyncWorkingFromManager()
+{
+	if (!manager) {
+		return;
+	}
+
+	const string selectedId = SelectedId();
+	updatingEditor = true;
+	workingOverlays = manager->Overlays();
+	currentIndex = -1;
+	RebuildTree();
+	updatingEditor = false;
+
+	for (int row = 0; row < overlayTree->topLevelItemCount(); row++) {
+		auto *item = overlayTree->topLevelItem(row);
+		if (item && item->data(0, Qt::UserRole + 1).toString().toStdString() == selectedId) {
+			overlayTree->setCurrentItem(item);
+			return;
+		}
+	}
+
+	if (!workingOverlays.empty()) {
+		overlayTree->setCurrentItem(overlayTree->topLevelItem(0));
+	} else {
+		SetEditorEnabled(false);
+	}
+}
+
 void HimotheeOverlayDock::RebuildTree()
 {
 	overlayTree->clear();
@@ -226,10 +352,29 @@ void HimotheeOverlayDock::RebuildTree()
 		item->setData(0, Qt::UserRole, static_cast<int>(i));
 		item->setData(0, Qt::UserRole + 1, QString::fromStdString(overlay.id));
 		item->setText(0, QString::fromStdString(overlay.name));
-		item->setText(1, TypeText(overlay.type));
+		item->setText(1, HimotheeOverlayTypeName(overlay.type));
 		item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
-		item->setText(3, SizeText(overlay));
+		item->setText(3, manager ? manager->RuntimeDisplay(overlay.id) : QStringLiteral("-"));
+		item->setText(4, SizeText(overlay));
 	}
+}
+
+void HimotheeOverlayDock::UpdateTreeRow(int index)
+{
+	if (index < 0 || index >= static_cast<int>(workingOverlays.size())) {
+		return;
+	}
+	auto *item = overlayTree->topLevelItem(index);
+	if (!item) {
+		return;
+	}
+
+	const auto &overlay = workingOverlays[static_cast<size_t>(index)];
+	item->setText(0, QString::fromStdString(overlay.name));
+	item->setText(1, HimotheeOverlayTypeName(overlay.type));
+	item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
+	item->setText(3, manager ? manager->RuntimeDisplay(overlay.id) : QStringLiteral("-"));
+	item->setText(4, SizeText(overlay));
 }
 
 void HimotheeOverlayDock::LoadEditor(int index)
@@ -242,14 +387,22 @@ void HimotheeOverlayDock::LoadEditor(int index)
 	updatingEditor = true;
 	const auto &overlay = workingOverlays[static_cast<size_t>(index)];
 	nameEdit->setText(QString::fromStdString(overlay.name));
+	const int typeIndex = typeCombo->findData(static_cast<int>(overlay.type));
+	typeCombo->setCurrentIndex(typeIndex >= 0 ? typeIndex : 0);
 	visibleCheck->setChecked(overlay.visible);
 	titleEdit->setText(QString::fromStdString(overlay.title));
 	textEdit->setText(QString::fromStdString(overlay.text));
+	valueSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.value, -999999, 999999)));
+	targetSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.target, 1, 999999)));
+	durationSecondsSpin->setValue(
+		static_cast<int>(clamp<int64_t>(overlay.durationMs / 1000, 1, 604800)));
 	widthSpin->setValue(static_cast<int>(overlay.width));
 	heightSpin->setValue(static_cast<int>(overlay.height));
 	urlLabel->setText(manager ? manager->OverlayUrl(overlay.id) : QString());
+	runtimeValueLabel->setText(manager ? manager->RuntimeDisplay(overlay.id) : QStringLiteral("-"));
 	updatingEditor = false;
 	SetEditorEnabled(true);
+	UpdateWidgetControls();
 	Refresh();
 }
 
@@ -260,21 +413,36 @@ void HimotheeOverlayDock::StoreEditor()
 	}
 
 	auto &overlay = workingOverlays[static_cast<size_t>(currentIndex)];
+	const HimotheeOverlayType previousType = overlay.type;
+	const HimotheeOverlayType newType =
+		static_cast<HimotheeOverlayType>(typeCombo->currentData().toInt());
+
 	overlay.name = nameEdit->text().trimmed().toStdString();
 	if (overlay.name.empty()) {
-		overlay.name = "Overlay";
+		overlay.name = "Widget";
 	}
+	overlay.type = newType;
 	overlay.visible = visibleCheck->isChecked();
 	overlay.title = titleEdit->text().toStdString();
 	overlay.text = textEdit->text().toStdString();
+	overlay.value = valueSpin->value();
+	overlay.target = targetSpin->value();
+	overlay.durationMs = static_cast<int64_t>(durationSecondsSpin->value()) * 1000;
 	overlay.width = static_cast<uint32_t>(widthSpin->value());
 	overlay.height = static_cast<uint32_t>(heightSpin->value());
 
-	if (auto *item = overlayTree->topLevelItem(currentIndex)) {
-		item->setText(0, QString::fromStdString(overlay.name));
-		item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
-		item->setText(3, SizeText(overlay));
+	if (overlay.type == HimotheeOverlayType::KillCounter || overlay.type == HimotheeOverlayType::StreakCounter ||
+	    overlay.type == HimotheeOverlayType::Progress) {
+		overlay.value = max<int64_t>(0, overlay.value);
 	}
+
+	if (previousType != newType) {
+		overlay.running = false;
+		overlay.startedAtMs = 0;
+		overlay.elapsedMs = 0;
+	}
+
+	UpdateTreeRow(currentIndex);
 }
 
 bool HimotheeOverlayDock::SaveChanges()
@@ -286,18 +454,25 @@ bool HimotheeOverlayDock::SaveChanges()
 	StoreEditor();
 	if (!manager->ReplaceOverlays(workingOverlays)) {
 		QMessageBox::warning(this, QStringLiteral("Himothee Overlays"),
-				     QStringLiteral("Could not save overlay settings for this profile."));
+				     QStringLiteral("Could not save widget settings for this profile."));
 		return false;
 	}
+
+	workingOverlays = manager->Overlays();
+	UpdateTreeRow(currentIndex);
 	return true;
 }
 
 void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 {
 	nameEdit->setEnabled(enabled);
+	typeCombo->setEnabled(enabled);
 	visibleCheck->setEnabled(enabled);
 	titleEdit->setEnabled(enabled);
 	textEdit->setEnabled(enabled);
+	valueSpin->setEnabled(enabled);
+	targetSpin->setEnabled(enabled);
+	durationSecondsSpin->setEnabled(enabled);
 	widthSpin->setEnabled(enabled);
 	heightSpin->setEnabled(enabled);
 	removeButton->setEnabled(enabled);
@@ -306,6 +481,45 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	previewButton->setEnabled(enabled && manager && manager->ServerRunning());
 	copyUrlButton->setEnabled(enabled && manager && manager->ServerRunning());
 	createSourceButton->setEnabled(enabled && manager && manager->ServerRunning());
+	counterControlsWidget->setEnabled(enabled);
+	timerControlsWidget->setEnabled(enabled);
+	if (enabled) {
+		UpdateWidgetControls();
+	} else {
+		textRowWidget->setVisible(false);
+		counterRowWidget->setVisible(false);
+		targetRowWidget->setVisible(false);
+		durationRowWidget->setVisible(false);
+		counterControlsWidget->setVisible(false);
+		timerControlsWidget->setVisible(false);
+		runtimeValueLabel->setText(QStringLiteral("-"));
+	}
+}
+
+void HimotheeOverlayDock::UpdateWidgetControls()
+{
+	if (currentIndex < 0 || currentIndex >= static_cast<int>(workingOverlays.size())) {
+		return;
+	}
+
+	const auto type = static_cast<HimotheeOverlayType>(typeCombo->currentData().toInt());
+	const bool isText = type == HimotheeOverlayType::Text;
+	const bool isCounter = HimotheeOverlayIsCounter(type);
+	const bool isProgress = type == HimotheeOverlayType::Progress;
+	const bool isCountdown = type == HimotheeOverlayType::Countdown;
+	const bool isTimer = HimotheeOverlayIsTimer(type);
+
+	textRowWidget->setVisible(isText);
+	counterRowWidget->setVisible(isCounter);
+	targetRowWidget->setVisible(isProgress);
+	durationRowWidget->setVisible(isCountdown);
+	counterControlsWidget->setVisible(isCounter);
+	timerControlsWidget->setVisible(isTimer);
+
+	const string id = SelectedId();
+	const auto *liveOverlay = manager ? manager->Find(id) : nullptr;
+	startPauseTimerButton->setText(liveOverlay && liveOverlay->running ? QStringLiteral("Pause")
+									 : QStringLiteral("Start"));
 }
 
 void HimotheeOverlayDock::AddOverlay()
@@ -314,7 +528,29 @@ void HimotheeOverlayDock::AddOverlay()
 		return;
 	}
 
-	const string id = manager->AddOverlay();
+	const QStringList types = {
+		QStringLiteral("Text"),
+		QStringLiteral("Counter"),
+		QStringLiteral("Kill Counter"),
+		QStringLiteral("Streak Counter"),
+		QStringLiteral("Challenge Progress"),
+		QStringLiteral("Countdown"),
+		QStringLiteral("Stopwatch"),
+		QStringLiteral("Stream Uptime"),
+	};
+
+	bool ok = false;
+	const QString selected = QInputDialog::getItem(this, QStringLiteral("New Widget"),
+						       QStringLiteral("Widget type"), types, 0, false, &ok);
+	if (!ok) {
+		return;
+	}
+
+	const int index = types.indexOf(selected);
+	const HimotheeOverlayType type =
+		index >= 0 ? static_cast<HimotheeOverlayType>(index) : HimotheeOverlayType::Text;
+
+	const string id = manager->AddOverlay(type);
 	workingOverlays = manager->Overlays();
 	RebuildTree();
 
@@ -334,7 +570,7 @@ void HimotheeOverlayDock::RemoveSelected()
 	}
 
 	const auto answer = QMessageBox::question(
-		this, QStringLiteral("Delete Overlay"),
+		this, QStringLiteral("Delete Widget"),
 		QStringLiteral("Delete '%1'? Existing browser sources using its URL will stop rendering.")
 			.arg(QString::fromStdString(workingOverlays[static_cast<size_t>(currentIndex)].name)));
 	if (answer != QMessageBox::Yes) {
@@ -364,11 +600,59 @@ void HimotheeOverlayDock::ToggleSelectedVisibility()
 	overlay.visible = !overlay.visible;
 	visibleCheck->setChecked(overlay.visible);
 	manager->ReplaceOverlays(workingOverlays);
-
-	if (auto *item = overlayTree->topLevelItem(currentIndex)) {
-		item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
-	}
+	workingOverlays = manager->Overlays();
+	UpdateTreeRow(currentIndex);
 	Refresh();
+}
+
+void HimotheeOverlayDock::AdjustSelectedValue(int delta)
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+	const string id = SelectedId();
+	if (!id.empty() && manager->AdjustValue(id, delta)) {
+		SyncWorkingFromManager();
+	}
+}
+
+void HimotheeOverlayDock::ResetSelectedValue()
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+	const string id = SelectedId();
+	if (!id.empty() && manager->ResetValue(id)) {
+		SyncWorkingFromManager();
+	}
+}
+
+void HimotheeOverlayDock::ToggleSelectedTimer()
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+	const string id = SelectedId();
+	const auto *overlay = manager->Find(id);
+	if (!overlay || !HimotheeOverlayIsTimer(overlay->type)) {
+		return;
+	}
+
+	const bool ok = overlay->running ? manager->PauseTimer(id) : manager->StartTimer(id);
+	if (ok) {
+		SyncWorkingFromManager();
+	}
+}
+
+void HimotheeOverlayDock::ResetSelectedTimer()
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+	const string id = SelectedId();
+	if (!id.empty() && manager->ResetTimer(id)) {
+		SyncWorkingFromManager();
+	}
 }
 
 void HimotheeOverlayDock::PreviewSelected()
@@ -389,8 +673,9 @@ void HimotheeOverlayDock::CopySelectedUrl()
 		return;
 	}
 
-	SaveChanges();
-	QApplication::clipboard()->setText(manager->OverlayUrl(id));
+	if (SaveChanges()) {
+		QApplication::clipboard()->setText(manager->OverlayUrl(id));
+	}
 }
 
 void HimotheeOverlayDock::CreateBrowserSource()
