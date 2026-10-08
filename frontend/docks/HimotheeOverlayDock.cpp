@@ -47,6 +47,15 @@ QString NormalizeColor(const QString &value, const QString &fallback)
 	return color.name(QColor::HexRgb).toUpper();
 }
 
+QString ThemeDisplayName(const string &theme)
+{
+	if (theme == "minimal") return QStringLiteral("Minimal");
+	if (theme == "neon") return QStringLiteral("Neon");
+	if (theme == "transparent") return QStringLiteral("Transparent");
+	if (theme == "custom") return QStringLiteral("Custom");
+	return QStringLiteral("Himothee Dark");
+}
+
 QWidget *MakeFormRow(QWidget *parent, const QString &labelText, QWidget *field)
 {
 	auto *row = new QWidget(parent);
@@ -466,7 +475,9 @@ void HimotheeOverlayDock::RebuildTree()
 		item->setText(1, HimotheeOverlayTypeName(overlay.type));
 		item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
 		item->setText(3, manager ? manager->RuntimeDisplay(overlay.id) : QStringLiteral("-"));
-		item->setText(4, SizeText(overlay));
+		item->setText(4, ThemeDisplayName(overlay.theme));
+		item->setText(5, HimotheeOverlayPositionName(overlay.position));
+		item->setText(6, SizeText(overlay));
 	}
 }
 
@@ -485,7 +496,9 @@ void HimotheeOverlayDock::UpdateTreeRow(int index)
 	item->setText(1, HimotheeOverlayTypeName(overlay.type));
 	item->setText(2, overlay.visible ? QStringLiteral("Yes") : QStringLiteral("No"));
 	item->setText(3, manager ? manager->RuntimeDisplay(overlay.id) : QStringLiteral("-"));
-	item->setText(4, SizeText(overlay));
+	item->setText(4, ThemeDisplayName(overlay.theme));
+	item->setText(5, HimotheeOverlayPositionName(overlay.position));
+	item->setText(6, SizeText(overlay));
 }
 
 void HimotheeOverlayDock::LoadEditor(int index)
@@ -507,6 +520,31 @@ void HimotheeOverlayDock::LoadEditor(int index)
 	targetSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.target, 1, 999999)));
 	durationSecondsSpin->setValue(
 		static_cast<int>(clamp<int64_t>(overlay.durationMs / 1000, 1, 604800)));
+
+	int themeIndex = themeCombo->findData(QString::fromStdString(overlay.theme));
+	if (themeIndex < 0) themeIndex = themeCombo->findData(QStringLiteral("custom"));
+	themeCombo->setCurrentIndex(themeIndex >= 0 ? themeIndex : 0);
+
+	int fontIndex = fontCombo->findData(QString::fromStdString(overlay.fontFamily));
+	if (fontIndex < 0 && !overlay.fontFamily.empty()) {
+		fontCombo->addItem(QString::fromStdString(overlay.fontFamily), QString::fromStdString(overlay.fontFamily));
+		fontIndex = fontCombo->count() - 1;
+	}
+	fontCombo->setCurrentIndex(fontIndex >= 0 ? fontIndex : 0);
+	fontSizeSpin->setValue(static_cast<int>(clamp<uint32_t>(overlay.fontSize, 12, 240)));
+	textColorEdit->setText(QString::fromStdString(overlay.textColor));
+	backgroundColorEdit->setText(QString::fromStdString(overlay.backgroundColor));
+	backgroundOpacitySpin->setValue(static_cast<int>(min<uint32_t>(overlay.backgroundOpacity, 100)));
+	cornerRadiusSpin->setValue(static_cast<int>(min<uint32_t>(overlay.cornerRadius, 200)));
+
+	const int positionIndex = positionCombo->findData(static_cast<int>(overlay.position));
+	positionCombo->setCurrentIndex(positionIndex >= 0 ? positionIndex : 4);
+	const int animationIndex = animationCombo->findData(static_cast<int>(overlay.animation));
+	animationCombo->setCurrentIndex(animationIndex >= 0 ? animationIndex : 0);
+	mediaPathEdit->setText(QString::fromStdString(overlay.mediaPath));
+	mediaOpacitySpin->setValue(static_cast<int>(min<uint32_t>(overlay.mediaOpacity, 100)));
+	mediaLoopCheck->setChecked(overlay.mediaLoop);
+
 	widthSpin->setValue(static_cast<int>(overlay.width));
 	heightSpin->setValue(static_cast<int>(overlay.height));
 	urlLabel->setText(manager ? manager->OverlayUrl(overlay.id) : QString());
@@ -539,6 +577,19 @@ void HimotheeOverlayDock::StoreEditor()
 	overlay.value = valueSpin->value();
 	overlay.target = targetSpin->value();
 	overlay.durationMs = static_cast<int64_t>(durationSecondsSpin->value()) * 1000;
+	overlay.theme = themeCombo->currentData().toString().toStdString();
+	overlay.fontFamily = fontCombo->currentData().toString().toStdString();
+	overlay.fontSize = static_cast<uint32_t>(fontSizeSpin->value());
+	overlay.textColor = NormalizeColor(textColorEdit->text(), QStringLiteral("#FFFFFF")).toStdString();
+	overlay.backgroundColor =
+		NormalizeColor(backgroundColorEdit->text(), QStringLiteral("#0A0C12")).toStdString();
+	overlay.backgroundOpacity = static_cast<uint32_t>(backgroundOpacitySpin->value());
+	overlay.cornerRadius = static_cast<uint32_t>(cornerRadiusSpin->value());
+	overlay.position = static_cast<HimotheeOverlayPosition>(positionCombo->currentData().toInt());
+	overlay.animation = static_cast<HimotheeOverlayAnimation>(animationCombo->currentData().toInt());
+	overlay.mediaPath = mediaPathEdit->text().trimmed().toStdString();
+	overlay.mediaOpacity = static_cast<uint32_t>(mediaOpacitySpin->value());
+	overlay.mediaLoop = mediaLoopCheck->isChecked();
 	overlay.width = static_cast<uint32_t>(widthSpin->value());
 	overlay.height = static_cast<uint32_t>(heightSpin->value());
 
@@ -584,6 +635,20 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	valueSpin->setEnabled(enabled);
 	targetSpin->setEnabled(enabled);
 	durationSecondsSpin->setEnabled(enabled);
+	themeCombo->setEnabled(enabled);
+	fontCombo->setEnabled(enabled);
+	fontSizeSpin->setEnabled(enabled);
+	textColorEdit->setEnabled(enabled);
+	backgroundColorEdit->setEnabled(enabled);
+	backgroundOpacitySpin->setEnabled(enabled);
+	cornerRadiusSpin->setEnabled(enabled);
+	positionCombo->setEnabled(enabled);
+	animationCombo->setEnabled(enabled);
+	mediaPathEdit->setEnabled(enabled);
+	browseMediaButton->setEnabled(enabled);
+	clearMediaButton->setEnabled(enabled);
+	mediaOpacitySpin->setEnabled(enabled);
+	mediaLoopCheck->setEnabled(enabled);
 	widthSpin->setEnabled(enabled);
 	heightSpin->setEnabled(enabled);
 	removeButton->setEnabled(enabled);
@@ -631,6 +696,63 @@ void HimotheeOverlayDock::UpdateWidgetControls()
 	const auto *liveOverlay = manager ? manager->Find(id) : nullptr;
 	startPauseTimerButton->setText(liveOverlay && liveOverlay->running ? QStringLiteral("Pause")
 									 : QStringLiteral("Start"));
+}
+
+void HimotheeOverlayDock::ApplyThemePreset(const QString &themeId)
+{
+	if (themeId == QStringLiteral("minimal")) {
+		fontCombo->setCurrentText(QStringLiteral("Arial"));
+		fontSizeSpin->setValue(58);
+		textColorEdit->setText(QStringLiteral("#FFFFFF"));
+		backgroundColorEdit->setText(QStringLiteral("#000000"));
+		backgroundOpacitySpin->setValue(45);
+		cornerRadiusSpin->setValue(8);
+		animationCombo->setCurrentIndex(animationCombo->findData(static_cast<int>(HimotheeOverlayAnimation::Fade)));
+	} else if (themeId == QStringLiteral("neon")) {
+		fontCombo->setCurrentText(QStringLiteral("Trebuchet MS"));
+		fontSizeSpin->setValue(68);
+		textColorEdit->setText(QStringLiteral("#7DF9FF"));
+		backgroundColorEdit->setText(QStringLiteral("#06070A"));
+		backgroundOpacitySpin->setValue(78);
+		cornerRadiusSpin->setValue(22);
+		animationCombo->setCurrentIndex(animationCombo->findData(static_cast<int>(HimotheeOverlayAnimation::Pop)));
+	} else if (themeId == QStringLiteral("transparent")) {
+		fontCombo->setCurrentText(QStringLiteral("Segoe UI"));
+		fontSizeSpin->setValue(64);
+		textColorEdit->setText(QStringLiteral("#FFFFFF"));
+		backgroundColorEdit->setText(QStringLiteral("#000000"));
+		backgroundOpacitySpin->setValue(0);
+		cornerRadiusSpin->setValue(0);
+		animationCombo->setCurrentIndex(animationCombo->findData(static_cast<int>(HimotheeOverlayAnimation::Fade)));
+	} else if (themeId == QStringLiteral("himothee_dark")) {
+		fontCombo->setCurrentText(QStringLiteral("Segoe UI"));
+		fontSizeSpin->setValue(64);
+		textColorEdit->setText(QStringLiteral("#FFFFFF"));
+		backgroundColorEdit->setText(QStringLiteral("#0A0C12"));
+		backgroundOpacitySpin->setValue(80);
+		cornerRadiusSpin->setValue(18);
+		animationCombo->setCurrentIndex(animationCombo->findData(static_cast<int>(HimotheeOverlayAnimation::Pop)));
+	}
+}
+
+void HimotheeOverlayDock::BrowseMedia()
+{
+	const QString file = QFileDialog::getOpenFileName(
+		this, QStringLiteral("Choose Overlay Media"), QString(),
+		QStringLiteral("Overlay Media (*.png *.jpg *.jpeg *.webp *.gif *.mp4 *.webm *.mov *.m4v);;"
+			       "Images (*.png *.jpg *.jpeg *.webp *.gif);;"
+			       "Video (*.mp4 *.webm *.mov *.m4v);;All Files (*)"));
+	if (!file.isEmpty()) {
+		mediaPathEdit->setText(file);
+		if (themeCombo->currentData().toString() != QStringLiteral("custom")) {
+			themeCombo->setCurrentIndex(themeCombo->findData(QStringLiteral("custom")));
+		}
+	}
+}
+
+void HimotheeOverlayDock::ClearMedia()
+{
+	mediaPathEdit->clear();
 }
 
 void HimotheeOverlayDock::AddOverlay()
