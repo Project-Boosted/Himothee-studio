@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.0**
+Current development version: **0.10.1**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -109,17 +109,20 @@ Himothee focused on streaming/output and production features.
 - First basic Text renderer.
 - Width/height stored per overlay.
 
-### Stage 10.2 — Timers & Counters — Next
+### Stage 10.2 — Timers & Counters — Implemented / runtime validation next
 
 - Countdown timer.
 - Count-up / stopwatch.
 - Generic counter.
 - Kill counter.
 - Streak counter.
-- Challenge/progress counter.
+- Challenge/progress counter with progress bar.
 - Stream uptime.
+- +1 / -1 / Reset counter controls.
+- Start / Pause / Reset timer controls.
+- Backward-compatible Stage 10.1 Text widgets.
 
-### Stage 10.3 — Overlay Designer
+### Stage 10.3 — Overlay Designer — Next
 
 - Themes.
 - Fonts, sizing, backgrounds, opacity.
