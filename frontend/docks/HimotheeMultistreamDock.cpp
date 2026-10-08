@@ -294,10 +294,10 @@ void HimotheeMultistreamDock::BuildUi()
 
 	auto *streamButtons = new QHBoxLayout();
 	streamButton = new QPushButton(QStringLiteral("Start Primary + Auto"), root);
-	startAllEnabledButton = new QPushButton(QStringLiteral("Start Enabled"), root);
-	stopAllSecondariesButton = new QPushButton(QStringLiteral("Stop Secondaries"), root);
-	startSelectedButton = new QPushButton(QStringLiteral("Start Selected"), root);
-	stopSelectedButton = new QPushButton(QStringLiteral("Stop Selected"), root);
+	startAllEnabledButton = new QPushButton(QStringLiteral("Go Live Enabled"), root);
+	stopAllSecondariesButton = new QPushButton(QStringLiteral("End Secondaries"), root);
+	startSelectedButton = new QPushButton(QStringLiteral("Go Live Selected"), root);
+	stopSelectedButton = new QPushButton(QStringLiteral("End Selected"), root);
 	streamButtons->addWidget(streamButton);
 	streamButtons->addWidget(startAllEnabledButton);
 	streamButtons->addWidget(stopAllSecondariesButton);
@@ -976,7 +976,7 @@ void HimotheeMultistreamDock::RefreshStatus()
 	}
 
 	startSelectedButton->setText(selectedFailed ? QStringLiteral("Retry Selected")
-						    : QStringLiteral("Start Selected"));
+						    : QStringLiteral("Go Live Selected"));
 
 	startAllEnabledButton->setEnabled(primaryActive && manager->EnabledCount() > 0);
 	stopAllSecondariesButton->setEnabled(primaryActive && activeCount > 0);
