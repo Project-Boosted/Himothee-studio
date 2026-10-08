@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.7**
+Current development version: **0.10.8**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -175,13 +175,14 @@ Himothee focused on streaming/output and production features.
 - Startup/profile readiness guard.
 - UI-thread execution contract.
 
-#### Stage 10.6.2 — Stream Deck local bridge — Next
+#### Stage 10.6.2 — Stream Deck local bridge — Implemented / build validation next
 
-- Localhost-only control connection.
-- Automatic Himothee detection.
-- Action discovery and execution.
-- State snapshot endpoint/event foundation.
+- Loopback HTTP JSON bridge on 127.0.0.1:3294.
+- Automatic Himothee detection via health probe.
+- Action discovery and execution endpoints.
+- State snapshot polling foundation.
 - No manual IP configuration.
+- Native Stream Deck plugin and live push remain future work.
 
 #### Later Stage 10.6 work
 
