@@ -5,6 +5,9 @@
 #include <obs.hpp>
 
 #include <QDateTime>
+#include <QFile>
+#include <QFileInfo>
+#include <QMimeDatabase>
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -136,6 +139,118 @@ bool HimotheeOverlayIsTimer(HimotheeOverlayType type)
 	return type == HimotheeOverlayType::Countdown || type == HimotheeOverlayType::Stopwatch;
 }
 
+const char *HimotheeOverlayPositionId(HimotheeOverlayPosition position)
+{
+	switch (position) {
+	case HimotheeOverlayPosition::TopLeft:
+		return "top_left";
+	case HimotheeOverlayPosition::TopCenter:
+		return "top_center";
+	case HimotheeOverlayPosition::TopRight:
+		return "top_right";
+	case HimotheeOverlayPosition::MiddleLeft:
+		return "middle_left";
+	case HimotheeOverlayPosition::MiddleRight:
+		return "middle_right";
+	case HimotheeOverlayPosition::BottomLeft:
+		return "bottom_left";
+	case HimotheeOverlayPosition::BottomCenter:
+		return "bottom_center";
+	case HimotheeOverlayPosition::BottomRight:
+		return "bottom_right";
+	case HimotheeOverlayPosition::Center:
+	default:
+		return "center";
+	}
+}
+
+QString HimotheeOverlayPositionName(HimotheeOverlayPosition position)
+{
+	switch (position) {
+	case HimotheeOverlayPosition::TopLeft:
+		return QStringLiteral("Top Left");
+	case HimotheeOverlayPosition::TopCenter:
+		return QStringLiteral("Top Centre");
+	case HimotheeOverlayPosition::TopRight:
+		return QStringLiteral("Top Right");
+	case HimotheeOverlayPosition::MiddleLeft:
+		return QStringLiteral("Middle Left");
+	case HimotheeOverlayPosition::MiddleRight:
+		return QStringLiteral("Middle Right");
+	case HimotheeOverlayPosition::BottomLeft:
+		return QStringLiteral("Bottom Left");
+	case HimotheeOverlayPosition::BottomCenter:
+		return QStringLiteral("Bottom Centre");
+	case HimotheeOverlayPosition::BottomRight:
+		return QStringLiteral("Bottom Right");
+	case HimotheeOverlayPosition::Center:
+	default:
+		return QStringLiteral("Centre");
+	}
+}
+
+HimotheeOverlayPosition HimotheeOverlayPositionFromId(const char *position)
+{
+	if (!position) {
+		return HimotheeOverlayPosition::Center;
+	}
+	if (astrcmpi(position, "top_left") == 0) return HimotheeOverlayPosition::TopLeft;
+	if (astrcmpi(position, "top_center") == 0) return HimotheeOverlayPosition::TopCenter;
+	if (astrcmpi(position, "top_right") == 0) return HimotheeOverlayPosition::TopRight;
+	if (astrcmpi(position, "middle_left") == 0) return HimotheeOverlayPosition::MiddleLeft;
+	if (astrcmpi(position, "middle_right") == 0) return HimotheeOverlayPosition::MiddleRight;
+	if (astrcmpi(position, "bottom_left") == 0) return HimotheeOverlayPosition::BottomLeft;
+	if (astrcmpi(position, "bottom_center") == 0) return HimotheeOverlayPosition::BottomCenter;
+	if (astrcmpi(position, "bottom_right") == 0) return HimotheeOverlayPosition::BottomRight;
+	return HimotheeOverlayPosition::Center;
+}
+
+const char *HimotheeOverlayAnimationId(HimotheeOverlayAnimation animation)
+{
+	switch (animation) {
+	case HimotheeOverlayAnimation::Fade:
+		return "fade";
+	case HimotheeOverlayAnimation::Pop:
+		return "pop";
+	case HimotheeOverlayAnimation::SlideUp:
+		return "slide_up";
+	case HimotheeOverlayAnimation::SlideLeft:
+		return "slide_left";
+	case HimotheeOverlayAnimation::None:
+	default:
+		return "none";
+	}
+}
+
+QString HimotheeOverlayAnimationName(HimotheeOverlayAnimation animation)
+{
+	switch (animation) {
+	case HimotheeOverlayAnimation::Fade:
+		return QStringLiteral("Fade");
+	case HimotheeOverlayAnimation::Pop:
+		return QStringLiteral("Pop");
+	case HimotheeOverlayAnimation::SlideUp:
+		return QStringLiteral("Slide Up");
+	case HimotheeOverlayAnimation::SlideLeft:
+		return QStringLiteral("Slide Left");
+	case HimotheeOverlayAnimation::None:
+	default:
+		return QStringLiteral("None");
+	}
+}
+
+HimotheeOverlayAnimation HimotheeOverlayAnimationFromId(const char *animation)
+{
+	if (!animation) {
+		return HimotheeOverlayAnimation::None;
+	}
+	if (astrcmpi(animation, "fade") == 0) return HimotheeOverlayAnimation::Fade;
+	if (astrcmpi(animation, "pop") == 0) return HimotheeOverlayAnimation::Pop;
+	if (astrcmpi(animation, "slide_up") == 0) return HimotheeOverlayAnimation::SlideUp;
+	if (astrcmpi(animation, "slide_left") == 0) return HimotheeOverlayAnimation::SlideLeft;
+	return HimotheeOverlayAnimation::None;
+}
+
 HimotheeOverlayManager::HimotheeOverlayManager(OBSBasic *main_) : main(main_), serverPort(kOverlayServerPort)
 {
 	server = make_unique<QTcpServer>();
@@ -229,6 +344,33 @@ bool HimotheeOverlayManager::Load()
 		overlay.startedAtMs =
 			obs_data_has_user_value(item, "started_at_ms") ? obs_data_get_int(item, "started_at_ms") : 0;
 
+		const char *theme = obs_data_get_string(item, "theme");
+		if (theme && *theme) overlay.theme = theme;
+		const char *fontFamily = obs_data_get_string(item, "font_family");
+		if (fontFamily && *fontFamily) overlay.fontFamily = fontFamily;
+		overlay.fontSize = obs_data_has_user_value(item, "font_size")
+				   ? static_cast<uint32_t>(obs_data_get_int(item, "font_size"))
+				   : 64;
+		const char *textColor = obs_data_get_string(item, "text_color");
+		if (textColor && *textColor) overlay.textColor = textColor;
+		const char *backgroundColor = obs_data_get_string(item, "background_color");
+		if (backgroundColor && *backgroundColor) overlay.backgroundColor = backgroundColor;
+		overlay.backgroundOpacity = obs_data_has_user_value(item, "background_opacity")
+					      ? static_cast<uint32_t>(obs_data_get_int(item, "background_opacity"))
+					      : 80;
+		overlay.cornerRadius = obs_data_has_user_value(item, "corner_radius")
+				      ? static_cast<uint32_t>(obs_data_get_int(item, "corner_radius"))
+				      : 18;
+		overlay.position = HimotheeOverlayPositionFromId(obs_data_get_string(item, "position"));
+		overlay.animation = obs_data_has_user_value(item, "animation")
+				    ? HimotheeOverlayAnimationFromId(obs_data_get_string(item, "animation"))
+				    : HimotheeOverlayAnimation::Pop;
+		overlay.mediaPath = obs_data_get_string(item, "media_path");
+		overlay.mediaOpacity = obs_data_has_user_value(item, "media_opacity")
+				       ? static_cast<uint32_t>(obs_data_get_int(item, "media_opacity"))
+				       : 100;
+		overlay.mediaLoop = !obs_data_has_user_value(item, "media_loop") || obs_data_get_bool(item, "media_loop");
+
 		if (overlay.id.empty()) {
 			overlay.id = "overlay-" + to_string(i + 1);
 		}
@@ -250,6 +392,10 @@ bool HimotheeOverlayManager::Load()
 		if (overlay.durationMs <= 0) {
 			overlay.durationMs = 300000;
 		}
+		overlay.fontSize = clamp<uint32_t>(overlay.fontSize, 12, 240);
+		overlay.backgroundOpacity = min<uint32_t>(overlay.backgroundOpacity, 100);
+		overlay.cornerRadius = min<uint32_t>(overlay.cornerRadius, 200);
+		overlay.mediaOpacity = min<uint32_t>(overlay.mediaOpacity, 100);
 		if (!HimotheeOverlayIsTimer(overlay.type)) {
 			overlay.running = false;
 			overlay.startedAtMs = 0;
@@ -290,6 +436,18 @@ bool HimotheeOverlayManager::Save() const
 		obs_data_set_int(item, "elapsed_ms", overlay.elapsedMs);
 		obs_data_set_bool(item, "running", overlay.running);
 		obs_data_set_int(item, "started_at_ms", overlay.startedAtMs);
+		obs_data_set_string(item, "theme", overlay.theme.c_str());
+		obs_data_set_string(item, "font_family", overlay.fontFamily.c_str());
+		obs_data_set_int(item, "font_size", overlay.fontSize);
+		obs_data_set_string(item, "text_color", overlay.textColor.c_str());
+		obs_data_set_string(item, "background_color", overlay.backgroundColor.c_str());
+		obs_data_set_int(item, "background_opacity", overlay.backgroundOpacity);
+		obs_data_set_int(item, "corner_radius", overlay.cornerRadius);
+		obs_data_set_string(item, "position", HimotheeOverlayPositionId(overlay.position));
+		obs_data_set_string(item, "animation", HimotheeOverlayAnimationId(overlay.animation));
+		obs_data_set_string(item, "media_path", overlay.mediaPath.c_str());
+		obs_data_set_int(item, "media_opacity", overlay.mediaOpacity);
+		obs_data_set_bool(item, "media_loop", overlay.mediaLoop);
 		obs_data_array_push_back(array, item);
 	}
 
@@ -626,6 +784,11 @@ QString HimotheeOverlayManager::OverlayUrl(const string &id) const
 	return QStringLiteral("%1/overlay/%2").arg(BaseUrl(), QString::fromStdString(id));
 }
 
+QString HimotheeOverlayManager::MediaUrl(const string &id) const
+{
+	return QStringLiteral("%1/media/%2").arg(BaseUrl(), QString::fromStdString(id));
+}
+
 void HimotheeOverlayManager::AcceptConnections()
 {
 	while (server && server->hasPendingConnections()) {
@@ -676,6 +839,7 @@ void HimotheeOverlayManager::HandleRequest(QTcpSocket *socket, const QByteArray 
 
 	const QString overlayPrefix = QStringLiteral("/overlay/");
 	const QString apiPrefix = QStringLiteral("/api/overlay/");
+	const QString mediaPrefix = QStringLiteral("/media/");
 	if (path.startsWith(overlayPrefix)) {
 		const string id = path.mid(overlayPrefix.size()).toStdString();
 		const auto *overlay = Find(id);
@@ -695,6 +859,33 @@ void HimotheeOverlayManager::HandleRequest(QTcpSocket *socket, const QByteArray 
 			return;
 		}
 		WriteResponse(socket, 200, "application/json; charset=utf-8", BuildOverlayJson(*overlay));
+		return;
+	}
+
+	if (path.startsWith(mediaPrefix)) {
+		const string id = path.mid(mediaPrefix.size()).toStdString();
+		const auto *overlay = Find(id);
+		if (!overlay || overlay->mediaPath.empty()) {
+			WriteResponse(socket, 404, "text/plain; charset=utf-8", "Media not found");
+			return;
+		}
+
+		const QString mediaPath = QString::fromStdString(overlay->mediaPath);
+		if (mediaPath.startsWith(QStringLiteral("http://"), Qt::CaseInsensitive) ||
+		    mediaPath.startsWith(QStringLiteral("https://"), Qt::CaseInsensitive)) {
+			WriteResponse(socket, 400, "text/plain; charset=utf-8", "Remote media is loaded directly");
+			return;
+		}
+
+		QFile file(mediaPath);
+		if (!file.open(QIODevice::ReadOnly)) {
+			WriteResponse(socket, 404, "text/plain; charset=utf-8", "Media file not found");
+			return;
+		}
+
+		QMimeDatabase mimeDatabase;
+		const QByteArray mime = mimeDatabase.mimeTypeForFile(QFileInfo(file)).name().toUtf8();
+		WriteResponse(socket, 200, mime.isEmpty() ? QByteArray("application/octet-stream") : mime, file.readAll());
 		return;
 	}
 
