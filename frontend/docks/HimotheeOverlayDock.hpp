@@ -59,6 +59,14 @@ private:
 	QSpinBox *checkoutScoreSpin = nullptr;
 	QLineEdit *checkoutRouteEdit = nullptr;
 	QSpinBox *checkoutDurationSpin = nullptr;
+
+	QSpinBox *gamingKillsSpin = nullptr;
+	QSpinBox *gamingDeathsSpin = nullptr;
+	QSpinBox *gamingAssistsSpin = nullptr;
+	QSpinBox *gamingWinsSpin = nullptr;
+	QSpinBox *gamingLossesSpin = nullptr;
+	QLineEdit *personalBestEdit = nullptr;
+
 	QSpinBox *targetSpin = nullptr;
 	QSpinBox *durationSecondsSpin = nullptr;
 	QSpinBox *widthSpin = nullptr;
@@ -74,9 +82,16 @@ private:
 	QWidget *checkoutScoreRowWidget = nullptr;
 	QWidget *checkoutRouteRowWidget = nullptr;
 	QWidget *checkoutDurationRowWidget = nullptr;
+	QWidget *gamingKillsRowWidget = nullptr;
+	QWidget *gamingDeathsRowWidget = nullptr;
+	QWidget *gamingAssistsRowWidget = nullptr;
+	QWidget *gamingWinsRowWidget = nullptr;
+	QWidget *gamingLossesRowWidget = nullptr;
+	QWidget *personalBestRowWidget = nullptr;
 	QWidget *counterControlsWidget = nullptr;
 	QWidget *timerControlsWidget = nullptr;
 	QWidget *checkoutControlsWidget = nullptr;
+	QWidget *gamingControlsWidget = nullptr;
 
 	QPushButton *decrementButton = nullptr;
 	QPushButton *incrementButton = nullptr;
@@ -85,6 +100,12 @@ private:
 	QPushButton *resetTimerButton = nullptr;
 	QPushButton *triggerCheckoutButton = nullptr;
 	QPushButton *clearCheckoutButton = nullptr;
+	QPushButton *addKillButton = nullptr;
+	QPushButton *addDeathButton = nullptr;
+	QPushButton *addAssistButton = nullptr;
+	QPushButton *addWinButton = nullptr;
+	QPushButton *addLossButton = nullptr;
+	QPushButton *resetGamingButton = nullptr;
 
 	QPushButton *addButton = nullptr;
 	QPushButton *removeButton = nullptr;
@@ -119,6 +140,8 @@ private:
 	void ResetSelectedTimer();
 	void TriggerSelectedCheckout();
 	void ClearSelectedCheckout();
+	void AdjustSelectedGamingStat(const std::string &stat, int delta);
+	void ResetSelectedGamingStats();
 	void PreviewSelected();
 	void CopySelectedUrl();
 	void CreateBrowserSource();
