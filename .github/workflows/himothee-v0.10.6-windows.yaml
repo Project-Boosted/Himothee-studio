@@ -1,0 +1,132 @@
+name: Himothee v0.10.6 - Gaming Widgets
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/gaming-widgets
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 gaming widgets
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout gaming-widgets branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify Stage 10.5 gaming implementation
+        run: |
+          $engine = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp"
+          $header = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.hpp"
+          $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp"
+
+          foreach ($pattern in @(
+            'gaming_kda',
+            'gaming_wins_losses',
+            'gaming_round',
+            'gaming_attempts',
+            'gaming_deaths',
+            'gaming_personal_best',
+            'gaming_session_stats',
+            'AdjustGamingStat',
+            'ResetGamingStats'
+          )) {
+            if (-not (Select-String -Path @($engine, $header) -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Gaming overlay engine is missing: $pattern"
+            }
+          }
+
+          foreach ($pattern in @(
+            'Gaming K/D/A',
+            'Gaming Wins / Losses',
+            'Gaming Round',
+            'Gaming Attempts',
+            'Gaming Deaths',
+            'Gaming Personal Best',
+            'Gaming Session Stats',
+            '+ Kill',
+            '+ Death',
+            '+ Assist',
+            '+ Win',
+            '+ Loss',
+            'Reset Stats'
+          )) {
+            if (-not (Select-String -Path $dock -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Gaming overlay dock is missing: $pattern"
+            }
+          }
+
+      - name: Verify overlay lifecycle and port fallback remain safe
+        run: |
+          $engine = Get-Content "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp" -Raw
+          $dock = Get-Content "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp" -Raw
+
+          $managerCtor = [regex]::Match(
+            $engine,
+            'HimotheeOverlayManager::HimotheeOverlayManager[\s\S]*?HimotheeOverlayManager::~HimotheeOverlayManager'
+          ).Value
+          if ($managerCtor -match 'LoadForCurrentProfile\(\);' -or $managerCtor -match 'GetCurrentProfile\(') {
+            throw 'Overlay manager constructor regressed to early profile access.'
+          }
+
+          $dockCtor = [regex]::Match(
+            $dock,
+            'HimotheeOverlayDock::HimotheeOverlayDock[\s\S]*?void HimotheeOverlayDock::BuildUi'
+          ).Value
+          if ($dockCtor -match 'ReloadFromManager\(\);' -or $dockCtor -match 'GetCurrentProfile\(') {
+            throw 'Overlay dock constructor regressed to early profile access.'
+          }
+
+          foreach ($pattern in @(
+            'kOverlayServerPort = 3293',
+            'kOverlayServerMaxPort = 3313',
+            'candidate <= kOverlayServerMaxPort'
+          )) {
+            if ($engine -notmatch [regex]::Escape($pattern)) {
+              throw "Overlay port fallback regressed: $pattern"
+            }
+          }
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.10.6 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.10.6') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.10.6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.10.6-Gaming-Widgets-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
