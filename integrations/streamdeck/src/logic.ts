@@ -64,22 +64,22 @@ export function validate(command: Command | null, actions: ActionDefinition[]): 
  return true;
 }
 export function visual(kind: Kind, settings: Settings, state: Snapshot, online: boolean) {
- if (!online) return {active:false,title:"STUDIO\\nOFFLINE"};
+ if (!online) return {active:false,title:"STUDIO\nOFFLINE"};
  const overlay = state.overlays.find(x=>x.id===settings.overlayId);
  const dest = state.destinations.find(x=>x.id===settings.destinationId);
  switch (kind) {
-  case "stream": return {active:state.streaming,title:state.streaming ? "STREAM\\nLIVE":"START\\nSTREAM"};
-  case "record": return {active:state.recording,title:state.recording ? "RECORD\\nON":"START\\nRECORD"};
+  case "stream": return {active:state.streaming,title:state.streaming ? "STREAM\nLIVE":"START\nSTREAM"};
+  case "record": return {active:state.recording,title:state.recording ? "RECORD\nON":"START\nRECORD"};
   case "destination": return {active:!!dest && ["active","starting","reconnecting"].includes(dest.state),
-   title:dest ? `${dest.name.slice(0,12)}\\n${dest.state.toUpperCase()}` : "SELECT\\nOUTPUT"};
+   title:dest ? `${dest.name.slice(0,12)}\n${dest.state.toUpperCase()}` : "SELECT\nOUTPUT"};
   case "scene": return {active:!!settings.scene && settings.scene===state.scene,
-   title:settings.scene ? `SCENE\\n${settings.scene.slice(0,14)}` : "SELECT\\nSCENE"};
+   title:settings.scene ? `SCENE\n${settings.scene.slice(0,14)}` : "SELECT\nSCENE"};
   case "overlay": return {active:!!overlay?.visible,
-   title:overlay ? `${overlay.name.slice(0,13)}\\n${overlay.visible?"SHOWN":"HIDDEN"}` : "SELECT\\nOVERLAY"};
+   title:overlay ? `${overlay.name.slice(0,13)}\n${overlay.visible?"SHOWN":"HIDDEN"}` : "SELECT\nOVERLAY"};
   case "counter": return {active:!!overlay,
-   title:overlay ? `${overlay.name.slice(0,13)}\\n${String(overlay.display??"0").slice(0,12)}` : "SELECT\\nCOUNTER"};
+   title:overlay ? `${overlay.name.slice(0,13)}\n${String(overlay.display??"0").slice(0,12)}` : "SELECT\nCOUNTER"};
   case "timer": return {active:!!overlay,
-   title:overlay ? `${overlay.name.slice(0,13)}\\n${String(overlay.display??"").slice(0,12)}` : "SELECT\\nTIMER"};
-  case "command": return {active:!!settings.actionId,title:settings.actionId ? settings.actionId.replace(".", "\\n").slice(0,23) : "SELECT\\nACTION"};
+   title:overlay ? `${overlay.name.slice(0,13)}\n${String(overlay.display??"").slice(0,12)}` : "SELECT\nTIMER"};
+  case "command": return {active:!!settings.actionId,title:settings.actionId ? settings.actionId.replace(".", "\n").slice(0,23) : "SELECT\nACTION"};
  }
 }
