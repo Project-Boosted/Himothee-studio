@@ -1,5 +1,4 @@
 find_package(Qt6 REQUIRED Widgets Network Svg Xml)
-find_package(Qt6 QUIET COMPONENTS WebSockets)
 
 if(OS_LINUX OR OS_FREEBSD OR OS_OPENBSD)
   find_package(Qt6 REQUIRED Gui DBus)
@@ -13,11 +12,6 @@ target_link_libraries(
   obs-studio
   PRIVATE Qt::Widgets Qt::Svg Qt::Xml Qt::Network OBS::qt-wrappers
 )
-
-if(TARGET Qt6::WebSockets)
-  target_link_libraries(obs-studio PRIVATE Qt6::WebSockets)
-  target_compile_definitions(obs-studio PRIVATE HIMOTHEE_HAS_QT_WEBSOCKETS=1)
-endif()
 
 set_target_properties(
   obs-studio
