@@ -1,4 +1,4 @@
-name: Himothee v0.10.2 - Overlay Designer
+name: Himothee v0.10.3 - Overlay Designer
 
 on:
   workflow_dispatch:
@@ -63,20 +63,51 @@ jobs:
             }
           }
 
+      - name: Verify startup lifecycle safety
+        run: |
+          $engine = Get-Content "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp" -Raw
+          $dock = Get-Content "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp" -Raw
+
+          $managerCtor = [regex]::Match(
+            $engine,
+            'HimotheeOverlayManager::HimotheeOverlayManager[\s\S]*?HimotheeOverlayManager::~HimotheeOverlayManager'
+          ).Value
+          if ($managerCtor -match 'LoadForCurrentProfile\(\);' -or
+              $managerCtor -match 'GetCurrentProfile\(' -or
+              $managerCtor -match 'UpdateRuntimeState\(\);') {
+            throw 'Overlay manager constructor still performs profile/runtime access too early.'
+          }
+
+          $dockCtor = [regex]::Match(
+            $dock,
+            'HimotheeOverlayDock::HimotheeOverlayDock[\s\S]*?void HimotheeOverlayDock::BuildUi'
+          ).Value
+          if ($dockCtor -match 'ReloadFromManager\(\);' -or $dockCtor -match 'GetCurrentProfile\(') {
+            throw 'Overlay dock constructor still performs profile access too early.'
+          }
+
+          if ($dock -match 'main->GetCurrentProfile\(') {
+            throw 'Overlay dock must not directly query the current profile.'
+          }
+
+          if ($engine -notmatch 'if \(!main \|\| !main->Config\(\)\)') {
+            throw 'Overlay engine profile readiness guard is missing.'
+          }
+
       - name: Build Himothee Studio
         uses: ./.github/actions/build-obs
         with:
           target: x64
           config: RelWithDebInfo
 
-      - name: Validate v0.10.2 identity
+      - name: Validate v0.10.3 identity
         run: |
           $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
           $info = $exe.VersionInfo
           Write-Host "ProductName: $($info.ProductName)"
           Write-Host "FileVersion: $($info.FileVersion)"
           if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
-          if ($info.FileVersion -ne '0.10.2') { throw 'Wrong Himothee version' }
+          if ($info.FileVersion -ne '0.10.3') { throw 'Wrong Himothee version' }
 
       - name: Package Windows build
         uses: ./.github/actions/package-obs
@@ -85,10 +116,10 @@ jobs:
           config: RelWithDebInfo
           package: false
 
-      - name: Upload Himothee Studio v0.10.2
+      - name: Upload Himothee Studio v0.10.3
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Himothee-Studio-v0.10.2-Overlay-Designer-Windows-x64
+          name: Himothee-Studio-v0.10.3-Overlay-Designer-Windows-x64
           path: build_x64/obs-studio-*-windows-x64.zip
           if-no-files-found: error
           retention-days: 14
