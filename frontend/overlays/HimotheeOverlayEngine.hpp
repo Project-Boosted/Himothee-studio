@@ -24,6 +24,26 @@ enum class HimotheeOverlayType {
 	StreamUptime,
 };
 
+enum class HimotheeOverlayPosition {
+	TopLeft,
+	TopCenter,
+	TopRight,
+	MiddleLeft,
+	Center,
+	MiddleRight,
+	BottomLeft,
+	BottomCenter,
+	BottomRight,
+};
+
+enum class HimotheeOverlayAnimation {
+	None,
+	Fade,
+	Pop,
+	SlideUp,
+	SlideLeft,
+};
+
 struct HimotheeOverlayDefinition {
 	std::string id;
 	std::string name;
@@ -40,6 +60,20 @@ struct HimotheeOverlayDefinition {
 	int64_t elapsedMs = 0;
 	bool running = false;
 	int64_t startedAtMs = 0;
+
+	std::string theme = "himothee_dark";
+	std::string fontFamily = "Segoe UI";
+	uint32_t fontSize = 64;
+	std::string textColor = "#FFFFFF";
+	std::string backgroundColor = "#0A0C12";
+	uint32_t backgroundOpacity = 80;
+	uint32_t cornerRadius = 18;
+	HimotheeOverlayPosition position = HimotheeOverlayPosition::Center;
+	HimotheeOverlayAnimation animation = HimotheeOverlayAnimation::Pop;
+
+	std::string mediaPath;
+	uint32_t mediaOpacity = 100;
+	bool mediaLoop = true;
 };
 
 class HimotheeOverlayManager {
@@ -78,6 +112,7 @@ public:
 	const std::string &ServerError() const noexcept { return serverError; }
 
 	QString OverlayUrl(const std::string &id) const;
+	QString MediaUrl(const std::string &id) const;
 	QString BaseUrl() const;
 
 private:
@@ -110,3 +145,11 @@ QString HimotheeOverlayTypeName(HimotheeOverlayType type);
 HimotheeOverlayType HimotheeOverlayTypeFromId(const char *type);
 bool HimotheeOverlayIsCounter(HimotheeOverlayType type);
 bool HimotheeOverlayIsTimer(HimotheeOverlayType type);
+
+const char *HimotheeOverlayPositionId(HimotheeOverlayPosition position);
+QString HimotheeOverlayPositionName(HimotheeOverlayPosition position);
+HimotheeOverlayPosition HimotheeOverlayPositionFromId(const char *position);
+
+const char *HimotheeOverlayAnimationId(HimotheeOverlayAnimation animation);
+QString HimotheeOverlayAnimationName(HimotheeOverlayAnimation animation);
+HimotheeOverlayAnimation HimotheeOverlayAnimationFromId(const char *animation);
