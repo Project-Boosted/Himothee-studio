@@ -8,6 +8,7 @@
 #include <vector>
 
 class OBSBasic;
+class QByteArray;
 class QTcpServer;
 class QTcpSocket;
 
