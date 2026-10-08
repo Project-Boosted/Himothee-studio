@@ -1,4 +1,4 @@
-name: Himothee v0.10.4 - Darts Widgets
+name: Himothee v0.10.5 - Overlay Port Hotfix
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   windows-x64:
-    name: Windows x64 darts widgets
+    name: Windows x64 overlay port hotfix
     runs-on: windows-2025-vs2026
     defaults:
       run:
@@ -87,20 +87,34 @@ jobs:
             throw 'Overlay dock constructor regressed to early profile access.'
           }
 
+      - name: Verify overlay port fallback
+        run: |
+          $engine = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp"
+          foreach ($pattern in @(
+            'kOverlayServerPort = 3293',
+            'kOverlayServerMaxPort = 3313',
+            'Preferred port %u was unavailable',
+            'candidate <= kOverlayServerMaxPort'
+          )) {
+            if (-not (Select-String -Path $engine -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay port fallback is missing: $pattern"
+            }
+          }
+
       - name: Build Himothee Studio
         uses: ./.github/actions/build-obs
         with:
           target: x64
           config: RelWithDebInfo
 
-      - name: Validate v0.10.4 identity
+      - name: Validate v0.10.5 identity
         run: |
           $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
           $info = $exe.VersionInfo
           Write-Host "ProductName: $($info.ProductName)"
           Write-Host "FileVersion: $($info.FileVersion)"
           if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
-          if ($info.FileVersion -ne '0.10.4') { throw 'Wrong Himothee version' }
+          if ($info.FileVersion -ne '0.10.5') { throw 'Wrong Himothee version' }
 
       - name: Package Windows build
         uses: ./.github/actions/package-obs
@@ -109,10 +123,10 @@ jobs:
           config: RelWithDebInfo
           package: false
 
-      - name: Upload Himothee Studio v0.10.4
+      - name: Upload Himothee Studio v0.10.5
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Himothee-Studio-v0.10.4-Darts-Widgets-Windows-x64
+          name: Himothee-Studio-v0.10.5-Overlay-Port-Hotfix-Windows-x64
           path: build_x64/obs-studio-*-windows-x64.zip
           if-no-files-found: error
           retention-days: 14
