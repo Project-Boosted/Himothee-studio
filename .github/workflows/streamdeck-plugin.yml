@@ -1,0 +1,35 @@
+name: Himothee Stream Deck Plugin
+on:
+  push:
+    branches: [feature/action-registry]
+    paths:
+      - 'integrations/streamdeck/**'
+      - '.github/workflows/streamdeck-plugin.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: integrations/streamdeck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install SDK and build tools
+        run: npm install
+      - name: Test command planner
+        run: npm test
+      - name: Compile and generate PNG assets
+        run: npm run build
+      - name: Validate Elgato manifest and assets
+        run: npx streamdeck validate com.himothee.studio.sdPlugin --no-update-check
+      - name: Build Stream Deck installer
+        run: npx streamdeck pack com.himothee.studio.sdPlugin --output dist --no-update-check
+      - name: Publish installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HimotheeStudio-StreamDeck-10.6.3
+          path: integrations/streamdeck/dist/*.streamDeckPlugin
+          if-no-files-found: error

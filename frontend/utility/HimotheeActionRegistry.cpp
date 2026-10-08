@@ -252,6 +252,18 @@ QJsonObject HimotheeActionRegistry::StateSnapshot() const
 	state.insert(QStringLiteral("scene"), currentScene ? QString::fromUtf8(obs_source_get_name(currentScene))
 							   : QString());
 
+	// Expose scene names so local controllers can configure scene keys without typing.
+	QJsonArray sceneNames;
+	obs_frontend_source_list sceneList = {};
+	obs_frontend_get_scenes(&sceneList);
+	for (size_t i = 0; i < sceneList.sources.num; ++i) {
+		if (const char *name = obs_source_get_name(sceneList.sources.array[i])) {
+			sceneNames.push_back(QString::fromUtf8(name));
+		}
+	}
+	obs_frontend_source_list_free(&sceneList);
+	state.insert(QStringLiteral("scenes"), sceneNames);
+
 	QJsonArray destinations;
 	if (auto *manager = main->GetHimotheeMultistreamManager()) {
 		for (const auto &status : manager->Status()) {

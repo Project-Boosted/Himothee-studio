@@ -1,0 +1,188 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.himothee.studio",
+  "Name": "Himothee Studio",
+  "Category": "Himothee Studio",
+  "Author": "HimotheeGaming",
+  "Description": "Control Himothee Studio streams, multistream destinations, scenes, overlays, counters and timers using the localhost Action Registry.",
+  "Version": "0.10.9.0",
+  "SDKVersion": 3,
+  "CodePath": "bin/plugin.js",
+  "Icon": "imgs/plugin",
+  "CategoryIcon": "imgs/category",
+  "PropertyInspectorPath": "ui/settings.html",
+  "Nodejs": {
+    "Version": "24"
+  },
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "com.himothee.studio.command",
+      "Name": "Registry Action",
+      "Tooltip": "Choose any discoverable Himothee action and its parameters.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.stream",
+      "Name": "Streaming",
+      "Tooltip": "Start or stop primary OBS streaming.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.record",
+      "Name": "Recording",
+      "Tooltip": "Start or stop recording.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.destination",
+      "Name": "Multistream Destination",
+      "Tooltip": "Start or stop an individual streaming destination.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.scene",
+      "Name": "Switch Scene",
+      "Tooltip": "Select a scene to switch to.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.overlay",
+      "Name": "Overlay Visibility",
+      "Tooltip": "Show or hide an overlay.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.counter",
+      "Name": "Counter +",
+      "Tooltip": "Increment an overlay counter.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.timer",
+      "Name": "Timer Command",
+      "Tooltip": "Start, pause or reset a timer overlay.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "Icon": "imgs/action",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        },
+        {
+          "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    }
+  ]
+}

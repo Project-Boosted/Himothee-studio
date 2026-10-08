@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{color-scheme:dark;font:13px system-ui,Segoe UI,Arial,sans-serif}
+body{margin:0;padding:14px;background:#20232a;color:#eee}
+h3{font-size:15px;margin:0 0 12px}
+label{display:block;margin:11px 0 5px;color:#cbd2dc;font-weight:600}
+select,input{width:100%;box-sizing:border-box;padding:8px;border:1px solid #555e6c;border-radius:5px;background:#151922;color:#fff}
+button{background:#263a53;border:1px solid #536780;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #65a6ff}
+#status{font-size:12px;margin:0 0 12px;color:#e0b060}
+small{display:block;color:#aab2bd;margin:5px 0 10px;line-height:1.45}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+</style></head><body>
+<h3>Himothee Studio</h3><div class="row"><span id="status">Connecting to Stream Deck...</span><button id="refresh" type="button">Refresh</button></div>
+<div id="fields"></div>
+<small>The Himothee Studio app must be open. Controls connect locally to 127.0.0.1:3294; no IP or password is required.</small>
+<script>
+"use strict";
+let socket,context="",actionUUID="",kind="",settings={},snapshot={online:false,actions:[],state:{}},lastCatalog="";
+const $=id=>document.getElementById(id);
+const kindOf=uuid=>uuid.split(".").pop();
+function send(event,payload){if(socket?.readyState===1) socket.send(JSON.stringify({event,context,action:actionUUID,payload}));}
+function save(){send("setSettings",settings);}
+function message(type){send("sendToPlugin",{type});}
+function field(title,value,change,type="text",description=""){
+ const label=document.createElement("label");label.textContent=title;
+ const el=document.createElement("input");el.type=type;el.value=String(value??"");
+ el.addEventListener("change",()=>change(type==="number"?(el.value===""?undefined:Number(el.value)):el.value));
+ const box=document.createElement("div");box.append(label,el);
+ if(description){const help=document.createElement("small");help.textContent=description;box.append(help);}
+ return box;
+}
+function select(title,value,options,change){
+ const box=document.createElement("div"),label=document.createElement("label"),el=document.createElement("select");
+ label.textContent=title;el.append(new Option("Choose...", ""));
+ for(const entry of options)el.append(new Option(entry.label,entry.value));
+ el.value=value||"";
+ el.addEventListener("change",()=>change(el.value));
+ box.append(label,el);return box;
+}
+function update(name,value){settings[name]=value;save();render();}
+function paramValue(name,value){settings.params={...(settings.params||{}),[name]:value};save();}
+function render(){
+ const host=$("fields");host.replaceChildren();
+ const state=snapshot.state||{}, overlays=Array.isArray(state.overlays)?state.overlays:[],
+  destinations=Array.isArray(state.destinations)?state.destinations:[],scenes=Array.isArray(state.scenes)?state.scenes:[];
+ const overlayOptions=overlays.map(x=>({value:x.id,label:x.name+" ("+x.type+")"}));
+ if(kind==="command"){
+  const all=(snapshot.actions||[]).map(x=>({value:x.id,label:x.category+" / "+x.name}));
+  host.append(select("Registered action",settings.actionId,all,v=>update("actionId",v)));
+  const action=(snapshot.actions||[]).find(x=>x.id===settings.actionId);
+  for(const [name,spec] of Object.entries(action?.parameters||{})){
+   const current=settings.params?.[name];
+   const numeric=["number","integer"].includes(spec.type);
+   const key=name==="overlay_id"?"overlay":name==="destination_id"?"destination":name==="scene"?"scene":null;
+   const options=key==="overlay"?overlayOptions:key==="destination"?destinations.map(x=>({value:x.id,label:x.name+" ("+x.state+")"})):
+    key==="scene"?scenes.map(x=>({value:x,label:x})):[];
+   if(options.length)host.append(select(name+(spec.required?" *":""),current,options,v=>paramValue(name,v)));
+   else host.append(field(name+(spec.required?" *":""),current,v=>paramValue(name,v),numeric?"number":"text",spec.description||""));
+  }
+ } else if(kind==="destination"){
+  host.append(select("Stream destination",settings.destinationId,destinations.map(x=>({value:x.id,label:x.name+" ("+x.state+")"})),v=>update("destinationId",v)));
+ } else if(kind==="scene"){
+  if(scenes.length)host.append(select("Scene",settings.scene,scenes.map(x=>({value:x,label:x})),v=>update("scene",v)));
+  else host.append(field("Scene name",settings.scene,v=>update("scene",v),"text","Enter the name exactly as shown in Himothee Studio."));
+ } else if(["counter","timer","overlay"].includes(kind)){
+  const selection=overlays.filter(x=>kind==="overlay" || String(x.type).toLowerCase().includes(kind));
+  host.append(select("Overlay",settings.overlayId,(selection.length?selection:overlays).map(x=>({value:x.id,label:x.name+" ("+x.type+")"})),v=>update("overlayId",v)));
+  if(kind==="counter")host.append(field("Increment amount (1-100)",settings.amount??1,v=>update("amount",v),"number"));
+  if(kind==="timer")host.append(select("Button command",settings.timerMode||"timer.start",
+   [{value:"timer.start",label:"Start"},{value:"timer.pause",label:"Pause"},{value:"timer.reset",label:"Reset"}],v=>update("timerMode",v)));
+ } else {
+  const info=document.createElement("small");info.textContent=kind==="stream"?"Press to start/stop primary streaming.":kind==="record"?"Press to start/stop recording.":"Configure this control using Himothee Studio.";
+  host.append(info);
+ }
+}
+window.connectElgatoStreamDeckSocket=(port,uuid,registrationEvent,info,actionInfo)=>{
+ context=uuid;
+ try{const details=JSON.parse(actionInfo);actionUUID=details.action;settings=details.payload?.settings||{};kind=kindOf(actionUUID);}
+ catch{$("status").textContent="Unable to read action settings";return;}
+ socket=new WebSocket("ws://127.0.0.1:"+port);
+ socket.addEventListener("open",()=>{socket.send(JSON.stringify({event:registrationEvent,uuid}));message("refresh");});
+ socket.addEventListener("message",event=>{
+  let msg;try{msg=JSON.parse(event.data);}catch{return;}
+  if(msg.event==="didReceiveSettings"){settings=msg.payload?.settings||{};render();}
+  if(msg.event==="sendToPropertyInspector"&&msg.payload?.type==="snapshot"){
+   snapshot=msg.payload;
+   $("status").textContent=snapshot.online?"Connected to Himothee Studio":"Himothee Studio offline";
+   $("status").style.color=snapshot.online?"#83d5a1":"#e0b060";
+   const state=snapshot.state||{};
+   const catalog=JSON.stringify({a:snapshot.actions,d:state.destinations,o:state.overlays?.map(x=>[x.id,x.name,x.type]),s:state.scenes});
+   if(catalog!==lastCatalog){lastCatalog=catalog;render();}
+  }
+ });
+ socket.addEventListener("close",()=>{$("status").textContent="Disconnected from Stream Deck";});
+ render();
+};
+$("refresh").addEventListener("click",()=>message("refresh"));
+</script></body></html>
