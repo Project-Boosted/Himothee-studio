@@ -2,6 +2,26 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.7 — Stage 10.6.1 Himothee Action Registry
+
+- Added application-level `HimotheeActionRegistry`.
+- Added discoverable stable action IDs and parameter metadata.
+- Added structured success/error results.
+- Added state snapshot foundation for future external controllers.
+- Added Start/Stop/Toggle actions for streaming and recording.
+- Added Replay Buffer Start/Stop/Toggle/Save actions.
+- Added scene switching by name.
+- Added source mute/unmute/toggle actions.
+- Added multistream destination Start/Stop/Start All/Stop All actions.
+- Added overlay Show/Hide/Toggle actions.
+- Added counter Increment/Decrement/Reset actions.
+- Added timer Start/Pause/Reset actions.
+- Added Darts Average and Checkout actions.
+- Added gaming stat and Personal Best actions.
+- Added startup/profile readiness and UI-thread execution guards.
+- No new external control port is exposed in this stage; Stream Deck transport remains Stage 10.6.2.
+
+
 ## 0.10.6 — Stage 10.5 Gaming Widgets
 
 - Added combined Gaming K/D/A widget.
