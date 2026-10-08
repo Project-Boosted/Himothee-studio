@@ -47,8 +47,10 @@
 extern volatile bool recording_paused;
 
 class ColorSelect;
+class HimotheeActionRegistry;
 class HimotheeMultistreamDock;
 class HimotheeOverlayDock;
+class HimotheeOverlayManager;
 class OBSAbout;
 class OBSBasicAdvAudio;
 class OBSBasicFilters;
@@ -455,8 +457,12 @@ private:
 	QPointer<OBSDock> mixerDock;
 	QPointer<HimotheeMultistreamDock> himotheeMultistreamDock;
 	QPointer<HimotheeOverlayDock> himotheeOverlayDock;
+	std::unique_ptr<HimotheeActionRegistry> himotheeActionRegistry;
 
 public:
+	HimotheeActionRegistry *GetHimotheeActionRegistry() const noexcept { return himotheeActionRegistry.get(); }
+	HimotheeOverlayManager *GetHimotheeOverlayManager() const;
+
 	void AddDockWidget(QDockWidget *dock, Qt::DockWidgetArea area, bool extraBrowser = false);
 	void RemoveDockWidget(const QString &name);
 	bool IsDockObjectNameUsed(const QString &name);
