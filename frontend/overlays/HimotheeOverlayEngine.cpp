@@ -1064,14 +1064,12 @@ QByteArray HimotheeOverlayManager::BuildOverlayJson(const HimotheeOverlayDefinit
 	QString mediaKind;
 	if (!overlay.mediaPath.empty()) {
 		const QString mediaPath = QString::fromStdString(overlay.mediaPath);
-		if (mediaPath.startsWith(QStringLiteral("http://"), Qt::CaseInsensitive) ||
-		    mediaPath.startsWith(QStringLiteral("https://"), Qt::CaseInsensitive)) {
-			mediaUrl = mediaPath;
-		} else {
-			mediaUrl = MediaUrl(overlay.id);
-		}
+		const bool remote = mediaPath.startsWith(QStringLiteral("http://"), Qt::CaseInsensitive) ||
+				    mediaPath.startsWith(QStringLiteral("https://"), Qt::CaseInsensitive);
+		mediaUrl = remote ? mediaPath : MediaUrl(overlay.id);
 
-		QString suffix = QFileInfo(QUrl(mediaPath).path()).suffix().toLower();
+		const QString suffix = remote ? QFileInfo(QUrl(mediaPath).path()).suffix().toLower()
+					     : QFileInfo(mediaPath).suffix().toLower();
 		mediaKind = (suffix == QStringLiteral("mp4") || suffix == QStringLiteral("webm") ||
 			     suffix == QStringLiteral("mov") || suffix == QStringLiteral("m4v"))
 				    ? QStringLiteral("video")
