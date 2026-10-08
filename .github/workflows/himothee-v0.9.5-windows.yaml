@@ -1,0 +1,80 @@
+name: Himothee v0.9.5 - Botrix Dock Cleanup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/botrix-custom-dock
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 no native chat
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify native chat removal
+        run: |
+          $removed = @(
+            "frontend/chat/HimotheeChat.cpp",
+            "frontend/chat/HimotheeChat.hpp",
+            "frontend/chat/TwitchChatProvider.cpp",
+            "frontend/chat/TwitchChatProvider.hpp",
+            "frontend/docks/HimotheeChatDock.cpp",
+            "frontend/docks/HimotheeChatDock.hpp"
+          )
+          foreach ($path in $removed) {
+            if (Test-Path "$Env:GITHUB_WORKSPACE\$path") {
+              throw "Native chat file still exists: $path"
+            }
+          }
+
+          $matches = git grep -n -E 'HimotheeChat|TwitchChatProvider|HIMOTHEE_HAS_QT_WEBSOCKETS' -- frontend
+          if ($LASTEXITCODE -eq 0 -and $matches) {
+            Write-Host $matches
+            throw 'Native chat references remain in frontend source.'
+          }
+          exit 0
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.9.5 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.9.5') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.9.5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Himothee-Studio-v0.9.5-Botrix-Custom-Dock-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
