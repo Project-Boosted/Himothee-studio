@@ -572,6 +572,11 @@ void HimotheeOverlayDock::LoadEditor(int index)
 	titleEdit->setText(QString::fromStdString(overlay.title));
 	textEdit->setText(QString::fromStdString(overlay.text));
 	valueSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.value, -999999, 999999)));
+	averageSpin->setValue(clamp(overlay.decimalValue, 0.0, 200.0));
+	checkoutScoreSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.checkoutScore, 0, 170)));
+	checkoutRouteEdit->setText(QString::fromStdString(overlay.checkoutRoute));
+	checkoutDurationSpin->setValue(
+		static_cast<int>(clamp<int64_t>(overlay.notificationDurationMs / 1000, 1, 15)));
 	targetSpin->setValue(static_cast<int>(clamp<int64_t>(overlay.target, 1, 999999)));
 	durationSecondsSpin->setValue(
 		static_cast<int>(clamp<int64_t>(overlay.durationMs / 1000, 1, 604800)));
@@ -630,6 +635,10 @@ void HimotheeOverlayDock::StoreEditor()
 	overlay.title = titleEdit->text().toStdString();
 	overlay.text = textEdit->text().toStdString();
 	overlay.value = valueSpin->value();
+	overlay.decimalValue = averageSpin->value();
+	overlay.checkoutScore = checkoutScoreSpin->value();
+	overlay.checkoutRoute = checkoutRouteEdit->text().trimmed().toStdString();
+	overlay.notificationDurationMs = static_cast<int64_t>(checkoutDurationSpin->value()) * 1000;
 	overlay.target = targetSpin->value();
 	overlay.durationMs = static_cast<int64_t>(durationSecondsSpin->value()) * 1000;
 	overlay.theme = themeCombo->currentData().toString().toStdString();
@@ -649,9 +658,12 @@ void HimotheeOverlayDock::StoreEditor()
 	overlay.height = static_cast<uint32_t>(heightSpin->value());
 
 	if (overlay.type == HimotheeOverlayType::KillCounter || overlay.type == HimotheeOverlayType::StreakCounter ||
-	    overlay.type == HimotheeOverlayType::Progress) {
+	    overlay.type == HimotheeOverlayType::Progress || HimotheeOverlayIsDarts(overlay.type)) {
 		overlay.value = max<int64_t>(0, overlay.value);
 	}
+	overlay.decimalValue = max(0.0, overlay.decimalValue);
+	overlay.checkoutScore = clamp<int64_t>(overlay.checkoutScore, 0, 170);
+	overlay.notificationDurationMs = clamp<int64_t>(overlay.notificationDurationMs, 1000, 15000);
 
 	if (previousType != newType) {
 		overlay.running = false;
@@ -688,6 +700,10 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	titleEdit->setEnabled(enabled);
 	textEdit->setEnabled(enabled);
 	valueSpin->setEnabled(enabled);
+	averageSpin->setEnabled(enabled);
+	checkoutScoreSpin->setEnabled(enabled);
+	checkoutRouteEdit->setEnabled(enabled);
+	checkoutDurationSpin->setEnabled(enabled);
 	targetSpin->setEnabled(enabled);
 	durationSecondsSpin->setEnabled(enabled);
 	themeCombo->setEnabled(enabled);
@@ -714,15 +730,21 @@ void HimotheeOverlayDock::SetEditorEnabled(bool enabled)
 	createSourceButton->setEnabled(enabled && manager && manager->ServerRunning());
 	counterControlsWidget->setEnabled(enabled);
 	timerControlsWidget->setEnabled(enabled);
+	checkoutControlsWidget->setEnabled(enabled);
 	if (enabled) {
 		UpdateWidgetControls();
 	} else {
 		textRowWidget->setVisible(false);
 		counterRowWidget->setVisible(false);
+		averageRowWidget->setVisible(false);
+		checkoutScoreRowWidget->setVisible(false);
+		checkoutRouteRowWidget->setVisible(false);
+		checkoutDurationRowWidget->setVisible(false);
 		targetRowWidget->setVisible(false);
 		durationRowWidget->setVisible(false);
 		counterControlsWidget->setVisible(false);
 		timerControlsWidget->setVisible(false);
+		checkoutControlsWidget->setVisible(false);
 		runtimeValueLabel->setText(QStringLiteral("-"));
 	}
 }
