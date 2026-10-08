@@ -52,6 +52,7 @@ export function configured(kind: Kind, settings: Settings, state: Snapshot): Com
    return {id,params};
   }
  }
+ return null; // Encoder actions are planned by src/dials.ts, not the keypad planner.
 }
 export function validate(command: Command | null, actions: ActionDefinition[]): boolean {
  if (!command) return false;
