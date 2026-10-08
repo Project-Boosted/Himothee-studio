@@ -615,6 +615,12 @@ string HimotheeOverlayManager::AddOverlay(HimotheeOverlayType type)
 		overlay.name = "Darts 180 Counter";
 		overlay.title = "180s";
 		overlay.theme = "neon";
+		overlay.fontFamily = "Trebuchet MS";
+		overlay.fontSize = 68;
+		overlay.textColor = "#7DF9FF";
+		overlay.backgroundColor = "#06070A";
+		overlay.backgroundOpacity = 78;
+		overlay.cornerRadius = 22;
 		break;
 	case HimotheeOverlayType::Darts140Plus:
 		overlay.name = "Darts 140+ Counter";
