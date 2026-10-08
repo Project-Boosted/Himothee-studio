@@ -136,18 +136,19 @@ void HimotheeMultistreamDock::BuildUi()
 	layout->addWidget(errorLabel);
 
 	destinationTree = new QTreeWidget(root);
-	destinationTree->setColumnCount(13);
+	destinationTree->setColumnCount(16);
 	destinationTree->setHeaderLabels(
 		{QStringLiteral("Destination"), QStringLiteral("Platform"), QStringLiteral("Enabled"),
 		 QStringLiteral("Mode"), QStringLiteral("State"), QStringLiteral("Bitrate"),
 		 QStringLiteral("Dropped"), QStringLiteral("Connect"), QStringLiteral("Health"),
 		 QStringLiteral("Uptime"), QStringLiteral("R/E"), QStringLiteral("Data"),
-		 QStringLiteral("Audio")});
+		 QStringLiteral("Audio"), QStringLiteral("Auto"), QStringLiteral("Input"),
+		 QStringLiteral("Output")});
 	destinationTree->setRootIsDecorated(false);
 	destinationTree->setAlternatingRowColors(true);
 	destinationTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	destinationTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	for (int column = 1; column < 13; column++) {
+	for (int column = 1; column < 16; column++) {
 		destinationTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
 	}
 	layout->addWidget(destinationTree, 1);
@@ -176,8 +177,12 @@ void HimotheeMultistreamDock::BuildUi()
 	nameEdit = new QLineEdit(editorGroup);
 	form->addRow(QStringLiteral("Name"), nameEdit);
 
-	enabledCheck = new QCheckBox(QStringLiteral("Use this destination when streaming"), editorGroup);
+	enabledCheck = new QCheckBox(QStringLiteral("Destination enabled"), editorGroup);
 	form->addRow(QString(), enabledCheck);
+
+	autoStartCheck = new QCheckBox(QStringLiteral("Go live automatically with primary stream"), editorGroup);
+	autoStartCheck->setChecked(true);
+	form->addRow(QString(), autoStartCheck);
 
 	encoderModeCombo = new QComboBox(editorGroup);
 	encoderModeCombo->addItems({QStringLiteral("Shared Encoder"), QStringLiteral("Independent Encoder")});
@@ -200,6 +205,9 @@ void HimotheeMultistreamDock::BuildUi()
 		audioTrackCombo->addItem(QStringLiteral("Track %1").arg(track), track);
 	}
 	form->addRow(QStringLiteral("Audio track"), audioTrackCombo);
+
+	inputResolutionLabel = new QLabel(QStringLiteral("Unavailable"), editorGroup);
+	form->addRow(QStringLiteral("OBS encoder input"), inputResolutionLabel);
 
 	outputWidthSpin = new QSpinBox(editorGroup);
 	outputWidthSpin->setRange(0, 7680);
@@ -282,10 +290,14 @@ void HimotheeMultistreamDock::BuildUi()
 	connect(saveButton, &QPushButton::clicked, this, [this]() { SaveChanges(); });
 
 	auto *streamButtons = new QHBoxLayout();
-	streamButton = new QPushButton(QStringLiteral("Start Streaming"), root);
+	streamButton = new QPushButton(QStringLiteral("Start Primary + Auto"), root);
+	startAllEnabledButton = new QPushButton(QStringLiteral("Start Enabled"), root);
+	stopAllSecondariesButton = new QPushButton(QStringLiteral("Stop Secondaries"), root);
 	startSelectedButton = new QPushButton(QStringLiteral("Start Selected"), root);
 	stopSelectedButton = new QPushButton(QStringLiteral("Stop Selected"), root);
 	streamButtons->addWidget(streamButton);
+	streamButtons->addWidget(startAllEnabledButton);
+	streamButtons->addWidget(stopAllSecondariesButton);
 	streamButtons->addWidget(startSelectedButton);
 	streamButtons->addWidget(stopSelectedButton);
 	layout->addLayout(streamButtons);
@@ -295,6 +307,20 @@ void HimotheeMultistreamDock::BuildUi()
 			return;
 		}
 		QMetaObject::invokeMethod(main, "StreamActionTriggered", Qt::QueuedConnection);
+	});
+	connect(startAllEnabledButton, &QPushButton::clicked, this, [this]() {
+		auto *manager = main->GetHimotheeMultistreamManager();
+		if (main->StreamingActive() && manager) {
+			manager->StartAllEnabled();
+			RefreshStatus();
+		}
+	});
+	connect(stopAllSecondariesButton, &QPushButton::clicked, this, [this]() {
+		auto *manager = main->GetHimotheeMultistreamManager();
+		if (manager) {
+			manager->StopAll(false);
+			RefreshStatus();
+		}
 	});
 	connect(startSelectedButton, &QPushButton::clicked, this, [this]() { ToggleSelectedDestination(true); });
 	connect(stopSelectedButton, &QPushButton::clicked, this, [this]() { ToggleSelectedDestination(false); });
