@@ -2,6 +2,23 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.4 — Stage 10.4 Darts Widgets
+
+- Added Darts 180 Counter.
+- Added Darts 140+ Counter.
+- Added Darts 100+ Counter.
+- Added Darts Legs Won counter.
+- Added Darts Match Wins counter.
+- Added two-decimal Darts Average widget.
+- Added timed Darts Checkout notification with score and route.
+- Added Trigger/Clear checkout controls.
+- Reused +1 / -1 / Reset controls for darts counters.
+- Extended `overlays.json` with darts average and checkout settings.
+- Kept checkout visibility runtime-only so stale notifications do not return after restart.
+- Preserved the Stage 10.1–10.3 browser URLs and designer settings.
+- Automatic HimotheeLink/Autodarts event integration remains a follow-up.
+
+
 ## 0.10.3 — Overlay startup lifecycle hotfix
 
 - Fixed a startup crash in the Stage 10 overlay system.
