@@ -243,6 +243,7 @@ bool HimotheeMultistreamManager::Load()
 			config.platform = "Custom RTMP";
 		}
 		config.enabled = obs_data_get_bool(item, "enabled");
+		config.autoStart = obs_data_has_user_value(item, "auto_start") ? obs_data_get_bool(item, "auto_start") : true;
 		const char *encoderMode = obs_data_get_string(item, "encoder_mode");
 		config.encoderMode =
 			encoderMode && astrcmpi(encoderMode, "independent") == 0 ? HimotheeEncoderMode::Independent
@@ -308,6 +309,7 @@ bool HimotheeMultistreamManager::Save() const
 		obs_data_set_string(item, "name", config.name.c_str());
 		obs_data_set_string(item, "platform", config.platform.c_str());
 		obs_data_set_bool(item, "enabled", config.enabled);
+		obs_data_set_bool(item, "auto_start", config.autoStart);
 		obs_data_set_string(item, "encoder_mode",
 				    config.encoderMode == HimotheeEncoderMode::Independent ? "independent" : "shared");
 		obs_data_set_int(item, "video_bitrate_kbps", config.videoBitrateKbps);
@@ -722,13 +724,39 @@ size_t HimotheeMultistreamManager::StartPrepared()
 	size_t started = 0;
 
 	for (const auto &runtime : runtimes) {
+		if (!runtime->config.enabled || !runtime->config.autoStart) {
+			continue;
+		}
 		if (runtime->state == HimotheeDestinationState::Prepared && StartDestination(runtime->config.id)) {
 			started++;
 		}
 	}
 
 	if (started > 0) {
-		blog(LOG_INFO, "[Himothee Multistream] Started %zu secondary destination(s).", started);
+		blog(LOG_INFO, "[Himothee Multistream] Auto-started %zu secondary destination(s).", started);
+	}
+
+	return started;
+}
+
+size_t HimotheeMultistreamManager::StartAllEnabled()
+{
+	size_t started = 0;
+
+	for (const auto &runtime : runtimes) {
+		if (!runtime->config.enabled || !runtime->output) {
+			continue;
+		}
+		if (runtime->state == HimotheeDestinationState::Stopping || obs_output_active(runtime->output)) {
+			continue;
+		}
+		if (StartDestination(runtime->config.id)) {
+			started++;
+		}
+	}
+
+	if (started > 0) {
+		blog(LOG_INFO, "[Himothee Multistream] Started %zu enabled secondary destination(s).", started);
 	}
 
 	return started;
@@ -832,6 +860,12 @@ size_t HimotheeMultistreamManager::EnabledCount() const
 	return count_if(destinations.begin(), destinations.end(), [](const auto &config) { return config.enabled; });
 }
 
+size_t HimotheeMultistreamManager::AutoStartCount() const
+{
+	return count_if(destinations.begin(), destinations.end(),
+			[](const auto &config) { return config.enabled && config.autoStart; });
+}
+
 const vector<HimotheeDestinationConfig> &HimotheeMultistreamManager::Destinations() const noexcept
 {
 	return destinations;
@@ -841,6 +875,9 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 {
 	vector<HimotheeDestinationStatus> result;
 	result.reserve(runtimes.size());
+
+	obs_video_info videoInfo{};
+	const bool haveVideoInfo = obs_get_video_info(&videoInfo);
 
 	for (const auto &runtime : runtimes) {
 		HimotheeDestinationStatus status;
@@ -853,6 +890,10 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 		status.lastError = runtime->lastError;
 		status.reconnectCount = runtime->reconnectCount;
 		status.errorCount = runtime->errorCount;
+		if (haveVideoInfo) {
+			status.inputWidth = videoInfo.output_width;
+			status.inputHeight = videoInfo.output_height;
+		}
 
 		const uint64_t nowNs = os_gettime_ns();
 		if (runtime->activeSinceNs > 0 && nowNs >= runtime->activeSinceNs) {
@@ -872,6 +913,10 @@ vector<HimotheeDestinationStatus> HimotheeMultistreamManager::Status() const
 			obs_encoder_t *audioEncoder = obs_output_get_audio_encoder(runtime->output, 0);
 			const char *videoCodec = videoEncoder ? obs_encoder_get_codec(videoEncoder) : nullptr;
 			const char *audioCodec = audioEncoder ? obs_encoder_get_codec(audioEncoder) : nullptr;
+			if (videoEncoder) {
+				status.outputWidth = obs_encoder_get_width(videoEncoder);
+				status.outputHeight = obs_encoder_get_height(videoEncoder);
+			}
 			status.videoCodec = videoCodec ? videoCodec : "";
 			status.audioCodec = audioCodec ? audioCodec : "";
 		}
