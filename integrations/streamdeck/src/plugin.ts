@@ -20,7 +20,7 @@ function inspectorUpdate() {
 }
 async function paint(context: string) {
  const entry = visible.get(context);
- if (!entry || !entry.action.isKey()) return;
+ if (!entry || (!entry.action.isKey() && !entry.action.isDial())) return;
  if (entry.kind === "dial-scene" && state.scenes?.length &&
      entry.sceneSelection && !state.scenes.includes(entry.sceneSelection)) {
    entry.sceneSelection = state.scene;
