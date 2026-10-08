@@ -335,6 +335,17 @@ void HimotheeOverlayDock::BuildUi()
 	timerControls->addStretch(1);
 	layout->addWidget(timerControlsWidget);
 
+	checkoutControlsWidget = new QWidget(root);
+	auto *checkoutControls = new QHBoxLayout(checkoutControlsWidget);
+	checkoutControls->setContentsMargins(0, 0, 0, 0);
+	checkoutControls->addWidget(new QLabel(QStringLiteral("Checkout"), checkoutControlsWidget));
+	triggerCheckoutButton = new QPushButton(QStringLiteral("Trigger"), checkoutControlsWidget);
+	clearCheckoutButton = new QPushButton(QStringLiteral("Clear"), checkoutControlsWidget);
+	checkoutControls->addWidget(triggerCheckoutButton);
+	checkoutControls->addWidget(clearCheckoutButton);
+	checkoutControls->addStretch(1);
+	layout->addWidget(checkoutControlsWidget);
+
 	auto *editButtons = new QHBoxLayout();
 	addButton = new QPushButton(QStringLiteral("New Widget"), root);
 	removeButton = new QPushButton(QStringLiteral("Delete"), root);
@@ -389,6 +400,8 @@ void HimotheeOverlayDock::BuildUi()
 	connect(resetCounterButton, &QPushButton::clicked, this, [this]() { ResetSelectedValue(); });
 	connect(startPauseTimerButton, &QPushButton::clicked, this, [this]() { ToggleSelectedTimer(); });
 	connect(resetTimerButton, &QPushButton::clicked, this, [this]() { ResetSelectedTimer(); });
+	connect(triggerCheckoutButton, &QPushButton::clicked, this, [this]() { TriggerSelectedCheckout(); });
+	connect(clearCheckoutButton, &QPushButton::clicked, this, [this]() { ClearSelectedCheckout(); });
 	connect(previewButton, &QPushButton::clicked, this, [this]() { PreviewSelected(); });
 	connect(copyUrlButton, &QPushButton::clicked, this, [this]() { CopySelectedUrl(); });
 	connect(createSourceButton, &QPushButton::clicked, this, [this]() { CreateBrowserSource(); });
