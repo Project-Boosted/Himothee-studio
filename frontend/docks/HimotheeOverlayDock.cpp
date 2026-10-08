@@ -151,6 +151,13 @@ void HimotheeOverlayDock::BuildUi()
 	typeCombo->addItem(QStringLiteral("Darts Match Wins"), static_cast<int>(HimotheeOverlayType::DartsWins));
 	typeCombo->addItem(QStringLiteral("Darts Average"), static_cast<int>(HimotheeOverlayType::DartsAverage));
 	typeCombo->addItem(QStringLiteral("Darts Checkout"), static_cast<int>(HimotheeOverlayType::DartsCheckout));
+	typeCombo->addItem(QStringLiteral("Gaming K/D/A"), static_cast<int>(HimotheeOverlayType::GamingKDA));
+	typeCombo->addItem(QStringLiteral("Gaming Wins / Losses"), static_cast<int>(HimotheeOverlayType::GamingWinsLosses));
+	typeCombo->addItem(QStringLiteral("Gaming Round"), static_cast<int>(HimotheeOverlayType::GamingRound));
+	typeCombo->addItem(QStringLiteral("Gaming Attempts"), static_cast<int>(HimotheeOverlayType::GamingAttempts));
+	typeCombo->addItem(QStringLiteral("Gaming Deaths"), static_cast<int>(HimotheeOverlayType::GamingDeaths));
+	typeCombo->addItem(QStringLiteral("Gaming Personal Best"), static_cast<int>(HimotheeOverlayType::GamingPersonalBest));
+	typeCombo->addItem(QStringLiteral("Gaming Session Stats"), static_cast<int>(HimotheeOverlayType::GamingSessionStats));
 	form->addRow(QStringLiteral("Type"), typeCombo);
 
 	visibleCheck = new QCheckBox(QStringLiteral("Overlay visible"), editorGroup);
@@ -193,6 +200,36 @@ void HimotheeOverlayDock::BuildUi()
 	checkoutDurationSpin->setSuffix(QStringLiteral(" sec"));
 	checkoutDurationRowWidget = MakeFormRow(editorGroup, QStringLiteral("Show for"), checkoutDurationSpin);
 	form->addRow(checkoutDurationRowWidget);
+
+	gamingKillsSpin = new QSpinBox(editorGroup);
+	gamingKillsSpin->setRange(0, 999999);
+	gamingKillsRowWidget = MakeFormRow(editorGroup, QStringLiteral("Kills"), gamingKillsSpin);
+	form->addRow(gamingKillsRowWidget);
+
+	gamingDeathsSpin = new QSpinBox(editorGroup);
+	gamingDeathsSpin->setRange(0, 999999);
+	gamingDeathsRowWidget = MakeFormRow(editorGroup, QStringLiteral("Deaths"), gamingDeathsSpin);
+	form->addRow(gamingDeathsRowWidget);
+
+	gamingAssistsSpin = new QSpinBox(editorGroup);
+	gamingAssistsSpin->setRange(0, 999999);
+	gamingAssistsRowWidget = MakeFormRow(editorGroup, QStringLiteral("Assists"), gamingAssistsSpin);
+	form->addRow(gamingAssistsRowWidget);
+
+	gamingWinsSpin = new QSpinBox(editorGroup);
+	gamingWinsSpin->setRange(0, 999999);
+	gamingWinsRowWidget = MakeFormRow(editorGroup, QStringLiteral("Wins"), gamingWinsSpin);
+	form->addRow(gamingWinsRowWidget);
+
+	gamingLossesSpin = new QSpinBox(editorGroup);
+	gamingLossesSpin->setRange(0, 999999);
+	gamingLossesRowWidget = MakeFormRow(editorGroup, QStringLiteral("Losses"), gamingLossesSpin);
+	form->addRow(gamingLossesRowWidget);
+
+	personalBestEdit = new QLineEdit(editorGroup);
+	personalBestEdit->setPlaceholderText(QStringLiteral("e.g. 1:42.53, Rank 12, 107.3 AVG"));
+	personalBestRowWidget = MakeFormRow(editorGroup, QStringLiteral("Personal Best"), personalBestEdit);
+	form->addRow(personalBestRowWidget);
 
 	targetSpin = new QSpinBox(editorGroup);
 	targetSpin->setRange(1, 999999);
@@ -346,6 +383,25 @@ void HimotheeOverlayDock::BuildUi()
 	checkoutControls->addStretch(1);
 	layout->addWidget(checkoutControlsWidget);
 
+	gamingControlsWidget = new QWidget(root);
+	auto *gamingControls = new QHBoxLayout(gamingControlsWidget);
+	gamingControls->setContentsMargins(0, 0, 0, 0);
+	gamingControls->addWidget(new QLabel(QStringLiteral("Gaming"), gamingControlsWidget));
+	addKillButton = new QPushButton(QStringLiteral("+ Kill"), gamingControlsWidget);
+	addDeathButton = new QPushButton(QStringLiteral("+ Death"), gamingControlsWidget);
+	addAssistButton = new QPushButton(QStringLiteral("+ Assist"), gamingControlsWidget);
+	addWinButton = new QPushButton(QStringLiteral("+ Win"), gamingControlsWidget);
+	addLossButton = new QPushButton(QStringLiteral("+ Loss"), gamingControlsWidget);
+	resetGamingButton = new QPushButton(QStringLiteral("Reset Stats"), gamingControlsWidget);
+	gamingControls->addWidget(addKillButton);
+	gamingControls->addWidget(addDeathButton);
+	gamingControls->addWidget(addAssistButton);
+	gamingControls->addWidget(addWinButton);
+	gamingControls->addWidget(addLossButton);
+	gamingControls->addWidget(resetGamingButton);
+	gamingControls->addStretch(1);
+	layout->addWidget(gamingControlsWidget);
+
 	auto *editButtons = new QHBoxLayout();
 	addButton = new QPushButton(QStringLiteral("New Widget"), root);
 	removeButton = new QPushButton(QStringLiteral("Delete"), root);
@@ -402,6 +458,12 @@ void HimotheeOverlayDock::BuildUi()
 	connect(resetTimerButton, &QPushButton::clicked, this, [this]() { ResetSelectedTimer(); });
 	connect(triggerCheckoutButton, &QPushButton::clicked, this, [this]() { TriggerSelectedCheckout(); });
 	connect(clearCheckoutButton, &QPushButton::clicked, this, [this]() { ClearSelectedCheckout(); });
+	connect(addKillButton, &QPushButton::clicked, this, [this]() { AdjustSelectedGamingStat("kills", 1); });
+	connect(addDeathButton, &QPushButton::clicked, this, [this]() { AdjustSelectedGamingStat("deaths", 1); });
+	connect(addAssistButton, &QPushButton::clicked, this, [this]() { AdjustSelectedGamingStat("assists", 1); });
+	connect(addWinButton, &QPushButton::clicked, this, [this]() { AdjustSelectedGamingStat("wins", 1); });
+	connect(addLossButton, &QPushButton::clicked, this, [this]() { AdjustSelectedGamingStat("losses", 1); });
+	connect(resetGamingButton, &QPushButton::clicked, this, [this]() { ResetSelectedGamingStats(); });
 	connect(previewButton, &QPushButton::clicked, this, [this]() { PreviewSelected(); });
 	connect(copyUrlButton, &QPushButton::clicked, this, [this]() { CopySelectedUrl(); });
 	connect(createSourceButton, &QPushButton::clicked, this, [this]() { CreateBrowserSource(); });
