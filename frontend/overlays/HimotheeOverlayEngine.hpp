@@ -86,6 +86,7 @@ public:
 	bool Save() const;
 
 	const std::vector<HimotheeOverlayDefinition> &Overlays() const noexcept { return overlays; }
+	const std::string &LoadedProfilePath() const noexcept { return loadedProfilePath; }
 	bool ReplaceOverlays(const std::vector<HimotheeOverlayDefinition> &updated);
 
 	std::string AddOverlay(HimotheeOverlayType type = HimotheeOverlayType::Text);
