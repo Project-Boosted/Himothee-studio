@@ -8,8 +8,10 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QClipboard>
+#include <QColor>
 #include <QComboBox>
 #include <QDesktopServices>
+#include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHeaderView>
@@ -34,6 +36,15 @@ namespace {
 QString SizeText(const HimotheeOverlayDefinition &overlay)
 {
 	return QStringLiteral("%1x%2").arg(overlay.width).arg(overlay.height);
+}
+
+QString NormalizeColor(const QString &value, const QString &fallback)
+{
+	QColor color(value.trimmed());
+	if (!color.isValid()) {
+		color = QColor(fallback);
+	}
+	return color.name(QColor::HexRgb).toUpper();
 }
 
 QWidget *MakeFormRow(QWidget *parent, const QString &labelText, QWidget *field)
@@ -80,14 +91,15 @@ void HimotheeOverlayDock::BuildUi()
 	layout->addWidget(serverLabel);
 
 	overlayTree = new QTreeWidget(root);
-	overlayTree->setColumnCount(5);
+	overlayTree->setColumnCount(7);
 	overlayTree->setHeaderLabels({QStringLiteral("Overlay"), QStringLiteral("Type"), QStringLiteral("Visible"),
-				     QStringLiteral("Live"), QStringLiteral("Size")});
+				     QStringLiteral("Live"), QStringLiteral("Theme"), QStringLiteral("Position"),
+				     QStringLiteral("Size")});
 	overlayTree->setRootIsDecorated(false);
 	overlayTree->setAlternatingRowColors(true);
 	overlayTree->setSelectionMode(QAbstractItemView::SingleSelection);
 	overlayTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-	for (int column = 1; column < 5; column++) {
+	for (int column = 1; column < 7; column++) {
 		overlayTree->header()->setSectionResizeMode(column, QHeaderView::ResizeToContents);
 	}
 	layout->addWidget(overlayTree, 1);
@@ -172,6 +184,89 @@ void HimotheeOverlayDock::BuildUi()
 
 	layout->addWidget(editorGroup);
 
+	auto *designerGroup = new QGroupBox(QStringLiteral("Overlay Designer"), root);
+	auto *designerForm = new QFormLayout(designerGroup);
+
+	themeCombo = new QComboBox(designerGroup);
+	themeCombo->addItem(QStringLiteral("Himothee Dark"), QStringLiteral("himothee_dark"));
+	themeCombo->addItem(QStringLiteral("Minimal"), QStringLiteral("minimal"));
+	themeCombo->addItem(QStringLiteral("Neon"), QStringLiteral("neon"));
+	themeCombo->addItem(QStringLiteral("Transparent"), QStringLiteral("transparent"));
+	themeCombo->addItem(QStringLiteral("Custom"), QStringLiteral("custom"));
+	designerForm->addRow(QStringLiteral("Theme"), themeCombo);
+
+	fontCombo = new QComboBox(designerGroup);
+	for (const QString &font : {QStringLiteral("Segoe UI"), QStringLiteral("Arial"), QStringLiteral("Impact"),
+				    QStringLiteral("Trebuchet MS"), QStringLiteral("Georgia"), QStringLiteral("Consolas")}) {
+		fontCombo->addItem(font, font);
+	}
+	designerForm->addRow(QStringLiteral("Font"), fontCombo);
+
+	fontSizeSpin = new QSpinBox(designerGroup);
+	fontSizeSpin->setRange(12, 240);
+	fontSizeSpin->setValue(64);
+	designerForm->addRow(QStringLiteral("Value size"), fontSizeSpin);
+
+	textColorEdit = new QLineEdit(designerGroup);
+	textColorEdit->setPlaceholderText(QStringLiteral("#FFFFFF"));
+	designerForm->addRow(QStringLiteral("Text colour"), textColorEdit);
+
+	backgroundColorEdit = new QLineEdit(designerGroup);
+	backgroundColorEdit->setPlaceholderText(QStringLiteral("#0A0C12"));
+	designerForm->addRow(QStringLiteral("Background"), backgroundColorEdit);
+
+	backgroundOpacitySpin = new QSpinBox(designerGroup);
+	backgroundOpacitySpin->setRange(0, 100);
+	backgroundOpacitySpin->setSuffix(QStringLiteral("%"));
+	backgroundOpacitySpin->setValue(80);
+	designerForm->addRow(QStringLiteral("Background opacity"), backgroundOpacitySpin);
+
+	cornerRadiusSpin = new QSpinBox(designerGroup);
+	cornerRadiusSpin->setRange(0, 200);
+	cornerRadiusSpin->setSuffix(QStringLiteral(" px"));
+	cornerRadiusSpin->setValue(18);
+	designerForm->addRow(QStringLiteral("Corner radius"), cornerRadiusSpin);
+
+	positionCombo = new QComboBox(designerGroup);
+	for (int i = static_cast<int>(HimotheeOverlayPosition::TopLeft);
+	     i <= static_cast<int>(HimotheeOverlayPosition::BottomRight); i++) {
+		const auto position = static_cast<HimotheeOverlayPosition>(i);
+		positionCombo->addItem(HimotheeOverlayPositionName(position), i);
+	}
+	designerForm->addRow(QStringLiteral("Position"), positionCombo);
+
+	animationCombo = new QComboBox(designerGroup);
+	for (int i = static_cast<int>(HimotheeOverlayAnimation::None);
+	     i <= static_cast<int>(HimotheeOverlayAnimation::SlideLeft); i++) {
+		const auto animation = static_cast<HimotheeOverlayAnimation>(i);
+		animationCombo->addItem(HimotheeOverlayAnimationName(animation), i);
+	}
+	designerForm->addRow(QStringLiteral("Animation"), animationCombo);
+
+	mediaPathEdit = new QLineEdit(designerGroup);
+	mediaPathEdit->setPlaceholderText(QStringLiteral("Optional image, GIF, video, or https:// URL"));
+	browseMediaButton = new QPushButton(QStringLiteral("Browse"), designerGroup);
+	clearMediaButton = new QPushButton(QStringLiteral("Clear"), designerGroup);
+	auto *mediaRow = new QWidget(designerGroup);
+	auto *mediaLayout = new QHBoxLayout(mediaRow);
+	mediaLayout->setContentsMargins(0, 0, 0, 0);
+	mediaLayout->addWidget(mediaPathEdit, 1);
+	mediaLayout->addWidget(browseMediaButton);
+	mediaLayout->addWidget(clearMediaButton);
+	designerForm->addRow(QStringLiteral("Media layer"), mediaRow);
+
+	mediaOpacitySpin = new QSpinBox(designerGroup);
+	mediaOpacitySpin->setRange(0, 100);
+	mediaOpacitySpin->setValue(100);
+	mediaOpacitySpin->setSuffix(QStringLiteral("%"));
+	designerForm->addRow(QStringLiteral("Media opacity"), mediaOpacitySpin);
+
+	mediaLoopCheck = new QCheckBox(QStringLiteral("Loop video media"), designerGroup);
+	mediaLoopCheck->setChecked(true);
+	designerForm->addRow(QString(), mediaLoopCheck);
+
+	layout->addWidget(designerGroup);
+
 	counterControlsWidget = new QWidget(root);
 	auto *counterControls = new QHBoxLayout(counterControlsWidget);
 	counterControls->setContentsMargins(0, 0, 0, 0);
@@ -225,6 +320,22 @@ void HimotheeOverlayDock::BuildUi()
 		UpdateWidgetControls();
 		UpdateTreeRow(currentIndex);
 	});
+	connect(themeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (updatingEditor) {
+			return;
+		}
+		ApplyThemePreset(themeCombo->currentData().toString());
+		StoreEditor();
+		UpdateTreeRow(currentIndex);
+	});
+	connect(positionCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
+		if (!updatingEditor) {
+			StoreEditor();
+			UpdateTreeRow(currentIndex);
+		}
+	});
+	connect(browseMediaButton, &QPushButton::clicked, this, [this]() { BrowseMedia(); });
+	connect(clearMediaButton, &QPushButton::clicked, this, [this]() { ClearMedia(); });
 	connect(addButton, &QPushButton::clicked, this, [this]() { AddOverlay(); });
 	connect(removeButton, &QPushButton::clicked, this, [this]() { RemoveSelected(); });
 	connect(saveButton, &QPushButton::clicked, this, [this]() { SaveChanges(); });
