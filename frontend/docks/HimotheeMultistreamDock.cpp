@@ -183,6 +183,9 @@ void HimotheeMultistreamDock::BuildUi()
 	autoStartCheck = new QCheckBox(QStringLiteral("Go live automatically with primary stream"), editorGroup);
 	autoStartCheck->setChecked(true);
 	form->addRow(QString(), autoStartCheck);
+	connect(enabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
+		autoStartCheck->setEnabled(checked && !main->StreamingActive());
+	});
 
 	encoderModeCombo = new QComboBox(editorGroup);
 	encoderModeCombo->addItems({QStringLiteral("Shared Encoder"), QStringLiteral("Independent Encoder")});
@@ -414,6 +417,28 @@ void HimotheeMultistreamDock::RebuildDestinationTree()
 		item->setText(10, QStringLiteral("0/0"));
 		item->setText(11, QStringLiteral("0 B"));
 		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
+		item->setText(13, config.autoStart ? QStringLiteral("Yes") : QStringLiteral("No"));
+		if (config.encoderMode == HimotheeEncoderMode::Independent && config.outputWidth > 0 &&
+		    config.outputHeight > 0) {
+			item->setText(15, QStringLiteral("%1x%2").arg(config.outputWidth).arg(config.outputHeight));
+		} else {
+			item->setText(15, QStringLiteral("Match input"));
+		}
+		item->setText(13, config.autoStart ? QStringLiteral("Yes") : QStringLiteral("No"));
+
+		obs_video_info videoInfo{};
+		if (obs_get_video_info(&videoInfo)) {
+			item->setText(14, QStringLiteral("%1x%2").arg(videoInfo.output_width).arg(videoInfo.output_height));
+		} else {
+			item->setText(14, QStringLiteral("-"));
+		}
+
+		if (config.encoderMode == HimotheeEncoderMode::Independent && config.outputWidth > 0 &&
+		    config.outputHeight > 0) {
+			item->setText(15, QStringLiteral("%1x%2").arg(config.outputWidth).arg(config.outputHeight));
+		} else {
+			item->setText(15, QStringLiteral("Match input"));
+		}
 	}
 }
 
@@ -434,6 +459,7 @@ void HimotheeMultistreamDock::LoadEditor(int index)
 	platformCombo->setCurrentIndex(platformIndex);
 	nameEdit->setText(QString::fromStdString(config.name));
 	enabledCheck->setChecked(config.enabled);
+	autoStartCheck->setChecked(config.autoStart);
 	encoderModeCombo->setCurrentIndex(config.encoderMode == HimotheeEncoderMode::Independent ? 1 : 0);
 	videoBitrateSpin->setValue(config.videoBitrateKbps);
 	audioBitrateSpin->setValue(config.audioBitrateKbps);
@@ -474,6 +500,7 @@ void HimotheeMultistreamDock::StoreEditor()
 	config.platform = platformCombo->currentText().toStdString();
 	config.name = nameEdit->text().trimmed().toStdString();
 	config.enabled = enabledCheck->isChecked();
+	config.autoStart = autoStartCheck->isChecked();
 	config.encoderMode =
 		encoderModeCombo->currentIndex() == 1 ? HimotheeEncoderMode::Independent : HimotheeEncoderMode::Shared;
 	config.videoBitrateKbps = videoBitrateSpin->value();
@@ -516,6 +543,7 @@ void HimotheeMultistreamDock::SetEditorEnabled(bool enabled)
 	platformCombo->setEnabled(enabled);
 	nameEdit->setEnabled(enabled);
 	enabledCheck->setEnabled(enabled);
+	autoStartCheck->setEnabled(enabled && enabledCheck->isChecked());
 	encoderModeCombo->setEnabled(enabled);
 	audioTrackCombo->setEnabled(enabled);
 	reconnectPolicyCombo->setEnabled(enabled);
@@ -571,6 +599,7 @@ void HimotheeMultistreamDock::AddDestination()
 	config.name = "Destination " + to_string(workingDestinations.size() + 1);
 	config.platform = "Custom RTMP";
 	config.enabled = true;
+	config.autoStart = true;
 	config.encoderMode = HimotheeEncoderMode::Shared;
 	config.videoBitrateKbps = 0;
 	config.audioBitrateKbps = 0;
@@ -724,12 +753,23 @@ void HimotheeMultistreamDock::RefreshStatus()
 	}
 
 	const bool primaryActive = main->StreamingActive();
-	streamButton->setText(primaryActive ? QStringLiteral("Stop Streaming") : QStringLiteral("Start Streaming"));
+	streamButton->setText(primaryActive ? QStringLiteral("Stop Primary + Secondaries")
+						    : QStringLiteral("Start Primary + Auto"));
+
+	obs_video_info videoInfo{};
+	const bool haveVideoInfo = obs_get_video_info(&videoInfo);
+	inputResolutionLabel->setText(haveVideoInfo
+					      ? QStringLiteral("%1x%2 (shared OBS video input)")
+							.arg(videoInfo.output_width)
+							.arg(videoInfo.output_height)
+					      : QStringLiteral("Unavailable"));
 	errorLabel->setVisible(false);
 	errorLabel->clear();
 
 	if (!manager) {
 		summaryLabel->setText(QStringLiteral("Multistream engine unavailable"));
+		startAllEnabledButton->setEnabled(false);
+		stopAllSecondariesButton->setEnabled(false);
 		startSelectedButton->setEnabled(false);
 		stopSelectedButton->setEnabled(false);
 		return;
@@ -769,8 +809,18 @@ void HimotheeMultistreamDock::RefreshStatus()
 			item->setText(11, QStringLiteral("0 B"));
 			const int configIndex = item->data(0, Qt::UserRole).toInt();
 			if (configIndex >= 0 && configIndex < static_cast<int>(workingDestinations.size())) {
-				item->setText(12, QStringLiteral("Track %1")
-							.arg(workingDestinations[static_cast<size_t>(configIndex)].audioTrack));
+				const auto &config = workingDestinations[static_cast<size_t>(configIndex)];
+				item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
+				item->setText(13, config.autoStart ? QStringLiteral("Yes") : QStringLiteral("No"));
+				item->setText(14, haveVideoInfo
+							 ? QStringLiteral("%1x%2").arg(videoInfo.output_width).arg(videoInfo.output_height)
+							 : QStringLiteral("-"));
+				if (config.encoderMode == HimotheeEncoderMode::Independent && config.outputWidth > 0 &&
+				    config.outputHeight > 0) {
+					item->setText(15, QStringLiteral("%1x%2").arg(config.outputWidth).arg(config.outputHeight));
+				} else {
+					item->setText(15, QStringLiteral("Match input"));
+				}
 			}
 			item->setToolTip(4, QString());
 			lastBytesById.erase(id);
@@ -804,6 +854,19 @@ void HimotheeMultistreamDock::RefreshStatus()
 		item->setText(10, QStringLiteral("%1/%2").arg(status.reconnectCount).arg(status.errorCount));
 		item->setText(11, FormatBytes(status.totalBytes));
 		item->setText(12, QStringLiteral("Track %1").arg(status.audioTrack));
+
+		const int configIndex = item->data(0, Qt::UserRole).toInt();
+		if (configIndex >= 0 && configIndex < static_cast<int>(workingDestinations.size())) {
+			item->setText(13, workingDestinations[static_cast<size_t>(configIndex)].autoStart
+						 ? QStringLiteral("Yes")
+						 : QStringLiteral("No"));
+		}
+		item->setText(14, status.inputWidth > 0 && status.inputHeight > 0
+					 ? QStringLiteral("%1x%2").arg(status.inputWidth).arg(status.inputHeight)
+					 : QStringLiteral("-"));
+		item->setText(15, status.outputWidth > 0 && status.outputHeight > 0
+					 ? QStringLiteral("%1x%2").arg(status.outputWidth).arg(status.outputHeight)
+					 : QStringLiteral("-"));
 		totalReconnectEvents += status.reconnectCount;
 		totalErrorEvents += status.errorCount;
 
@@ -819,6 +882,12 @@ void HimotheeMultistreamDock::RefreshStatus()
 				   .arg(status.audioTrack)
 				   .arg(status.dedicatedAudioEncoder ? QStringLiteral("dedicated")
 								    : QStringLiteral("shared"));
+		if (status.inputWidth > 0 && status.inputHeight > 0) {
+			tooltip += QStringLiteral("\nInput: %1x%2").arg(status.inputWidth).arg(status.inputHeight);
+		}
+		if (status.outputWidth > 0 && status.outputHeight > 0) {
+			tooltip += QStringLiteral("\nOutput: %1x%2").arg(status.outputWidth).arg(status.outputHeight);
+		}
 		tooltip += QStringLiteral("\nState time: %1").arg(FormatDuration(status.stateSeconds));
 		tooltip += QStringLiteral("\nReconnects: %1 | Errors: %2")
 				   .arg(status.reconnectCount)
@@ -843,16 +912,19 @@ void HimotheeMultistreamDock::RefreshStatus()
 		}
 	}
 
+	const QString inputText = haveVideoInfo
+					  ? QStringLiteral("%1x%2").arg(videoInfo.output_width).arg(videoInfo.output_height)
+					  : QStringLiteral("-");
 	summaryLabel->setText(
-		QStringLiteral("Primary: %1  |  Live: %2/%3  |  Independent: %4  |  Reconnecting: %5  |  Current errors: %6  |  R/E: %7/%8")
+		QStringLiteral("Primary: %1  |  OBS input: %2  |  Secondary live: %3/%4  |  Auto: %5  |  Independent: %6  |  Reconnecting: %7  |  Errors: %8")
 			.arg(primaryActive ? QStringLiteral("Live") : QStringLiteral("Stopped"))
+			.arg(inputText)
 			.arg(activeCount)
 			.arg(manager->EnabledCount())
+			.arg(manager->AutoStartCount())
 			.arg(independentActiveCount)
 			.arg(reconnectingCount)
-			.arg(errorCount)
-			.arg(totalReconnectEvents)
-			.arg(totalErrorEvents));
+			.arg(errorCount));
 
 	const bool selected = currentIndex >= 0 && currentIndex < static_cast<int>(workingDestinations.size());
 	bool selectedActive = false;
@@ -879,6 +951,8 @@ void HimotheeMultistreamDock::RefreshStatus()
 	startSelectedButton->setText(selectedFailed ? QStringLiteral("Retry Selected")
 						    : QStringLiteral("Start Selected"));
 
+	startAllEnabledButton->setEnabled(primaryActive && manager->EnabledCount() > 0);
+	stopAllSecondariesButton->setEnabled(primaryActive && activeCount > 0);
 	startSelectedButton->setEnabled(primaryActive && selected && selectedCanStart &&
 					 workingDestinations[static_cast<size_t>(currentIndex)].enabled);
 	stopSelectedButton->setEnabled(primaryActive && selected && selectedActive);
