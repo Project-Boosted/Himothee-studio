@@ -611,6 +611,40 @@ string HimotheeOverlayManager::AddOverlay(HimotheeOverlayType type)
 		overlay.name = "Stream Uptime";
 		overlay.title = "Stream Uptime";
 		break;
+	case HimotheeOverlayType::Darts180:
+		overlay.name = "Darts 180 Counter";
+		overlay.title = "180s";
+		overlay.theme = "neon";
+		break;
+	case HimotheeOverlayType::Darts140Plus:
+		overlay.name = "Darts 140+ Counter";
+		overlay.title = "140+";
+		break;
+	case HimotheeOverlayType::Darts100Plus:
+		overlay.name = "Darts 100+ Counter";
+		overlay.title = "100+";
+		break;
+	case HimotheeOverlayType::DartsLegs:
+		overlay.name = "Darts Legs Won";
+		overlay.title = "Legs";
+		break;
+	case HimotheeOverlayType::DartsWins:
+		overlay.name = "Darts Match Wins";
+		overlay.title = "Wins";
+		break;
+	case HimotheeOverlayType::DartsAverage:
+		overlay.name = "Darts Average";
+		overlay.title = "Average";
+		overlay.decimalValue = 0.0;
+		break;
+	case HimotheeOverlayType::DartsCheckout:
+		overlay.name = "Darts Checkout";
+		overlay.title = "Checkout";
+		overlay.checkoutScore = 0;
+		overlay.checkoutRoute = "T20 D20";
+		overlay.notificationDurationMs = 3000;
+		overlay.animation = HimotheeOverlayAnimation::Pop;
+		break;
 	case HimotheeOverlayType::Text:
 	default:
 		overlay.name = "Text Overlay";
@@ -671,7 +705,7 @@ bool HimotheeOverlayManager::AdjustValue(const string &id, int64_t delta)
 
 	overlay->value += delta;
 	if (overlay->type == HimotheeOverlayType::KillCounter || overlay->type == HimotheeOverlayType::StreakCounter ||
-	    overlay->type == HimotheeOverlayType::Progress) {
+	    overlay->type == HimotheeOverlayType::Progress || HimotheeOverlayIsDarts(overlay->type)) {
 		overlay->value = max<int64_t>(0, overlay->value);
 	}
 
@@ -738,6 +772,42 @@ bool HimotheeOverlayManager::ResetTimer(const string &id)
 	overlay->running = false;
 	overlay->startedAtMs = 0;
 	return Save();
+}
+
+bool HimotheeOverlayManager::SetDecimalValue(const string &id, double value)
+{
+	auto *overlay = Find(id);
+	if (!overlay || overlay->type != HimotheeOverlayType::DartsAverage) {
+		return false;
+	}
+
+	overlay->decimalValue = max(0.0, value);
+	return Save();
+}
+
+bool HimotheeOverlayManager::TriggerCheckout(const string &id, int64_t score, const string &route, int64_t durationMs)
+{
+	auto *overlay = Find(id);
+	if (!overlay || overlay->type != HimotheeOverlayType::DartsCheckout) {
+		return false;
+	}
+
+	overlay->checkoutScore = clamp<int64_t>(score, 0, 170);
+	overlay->checkoutRoute = route;
+	overlay->notificationDurationMs = clamp<int64_t>(durationMs, 500, 15000);
+	overlay->notificationUntilMs = NowMs() + overlay->notificationDurationMs;
+	return Save();
+}
+
+bool HimotheeOverlayManager::ClearCheckout(const string &id)
+{
+	auto *overlay = Find(id);
+	if (!overlay || overlay->type != HimotheeOverlayType::DartsCheckout) {
+		return false;
+	}
+
+	overlay->notificationUntilMs = 0;
+	return true;
 }
 
 const HimotheeOverlayDefinition *HimotheeOverlayManager::Find(const string &id) const
