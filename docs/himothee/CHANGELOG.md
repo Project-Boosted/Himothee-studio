@@ -2,6 +2,21 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.0 — Stage 10.1 Overlay Engine & Dock
+
+- Added native Himothee Overlays dock.
+- Added per-profile overlay persistence in `overlays.json`.
+- Added localhost-only overlay HTTP server on port 3293.
+- Added stable `/overlay/<id>` browser-source pages.
+- Added `/api/overlay/<id>` live state endpoints.
+- Added the first transparent Text overlay renderer.
+- Added New/Delete/Save and Show/Hide controls.
+- Added browser Preview and Copy URL.
+- Added Create OBS Source for the current scene.
+- Added per-overlay browser width/height.
+- Kept the overlay engine independent from Botrix chat and the Multistream Manager.
+
+
 ## 0.9.6 — Multistream control and resolution audit
 
 - Separated destination Enabled from Auto-start.
