@@ -20,7 +20,7 @@ experimental history and are not the forward product path.
 
 ## Current development
 
-Version: **0.10.2**
+Version: **0.10.3**
 
 Focus: **Stage 10.3 — Overlay Designer**.
 
