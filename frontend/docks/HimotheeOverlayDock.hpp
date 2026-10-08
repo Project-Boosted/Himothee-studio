@@ -37,6 +37,22 @@ private:
 	QCheckBox *visibleCheck = nullptr;
 	QLineEdit *titleEdit = nullptr;
 	QLineEdit *textEdit = nullptr;
+
+	QComboBox *themeCombo = nullptr;
+	QComboBox *fontCombo = nullptr;
+	QSpinBox *fontSizeSpin = nullptr;
+	QLineEdit *textColorEdit = nullptr;
+	QLineEdit *backgroundColorEdit = nullptr;
+	QSpinBox *backgroundOpacitySpin = nullptr;
+	QSpinBox *cornerRadiusSpin = nullptr;
+	QComboBox *positionCombo = nullptr;
+	QComboBox *animationCombo = nullptr;
+	QLineEdit *mediaPathEdit = nullptr;
+	QPushButton *browseMediaButton = nullptr;
+	QPushButton *clearMediaButton = nullptr;
+	QSpinBox *mediaOpacitySpin = nullptr;
+	QCheckBox *mediaLoopCheck = nullptr;
+
 	QSpinBox *valueSpin = nullptr;
 	QSpinBox *targetSpin = nullptr;
 	QSpinBox *durationSecondsSpin = nullptr;
@@ -78,6 +94,9 @@ private:
 	bool SaveChanges();
 	void SetEditorEnabled(bool enabled);
 	void UpdateWidgetControls();
+	void ApplyThemePreset(const QString &themeId);
+	void BrowseMedia();
+	void ClearMedia();
 
 	void AddOverlay();
 	void RemoveSelected();
