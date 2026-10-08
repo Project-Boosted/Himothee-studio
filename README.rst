@@ -14,7 +14,7 @@ Project Status
 
 Early development / pre-release.
 
-Current Himothee Studio development version: 0.9.6
+Current Himothee Studio development version: 0.10.0
 
 Underlying OBS baseline: OBS Studio 32.2.2
 (commit ba2f32bdf791005443988a4955e963663e16b1ed).
@@ -40,6 +40,10 @@ Current Features
 * Live Input and Output resolution reporting for each destination.
 * Independent per-destination output scaling, such as Twitch 2560x1440 primary + Kick 1920x1080.
 * Normal OBS Custom Browser Docks for external tools such as Botrix Multi Chat.
+* Native Himothee Overlays dock.
+* Localhost transparent browser-source overlay engine.
+* Per-profile overlay persistence.
+* Show/Hide, Preview, Copy URL, and Create OBS Source controls.
 
 Chat
 ----
@@ -66,9 +70,10 @@ v0.6 - Independent encoders.
 v0.7 - Destination resilience and telemetry.
 v0.8 - Per-destination audio routing.
 v0.9.x - Runtime/RTMP compatibility hardening, native-chat removal, and live destination control audit.
+v0.10.0 - Stage 10.1 Overlay Engine + Himothee Overlays dock.
 
-Next development returns to production tools: alerts, media triggers, macros,
-counters/timers, overlays, Stream Deck/external control, and release/security work.
+Next overlay stages add timers, counters, kill counters, darts widgets,
+themes/animations, hotkeys, Stream Deck actions, and automation.
 
 Security
 --------
