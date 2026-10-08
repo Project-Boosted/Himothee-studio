@@ -535,6 +535,13 @@ void HimotheeMultistreamDock::StoreEditor()
 					 ? QStringLiteral("Independent")
 					 : QStringLiteral("Shared"));
 		item->setText(12, QStringLiteral("Track %1").arg(config.audioTrack));
+		item->setText(13, config.autoStart ? QStringLiteral("Yes") : QStringLiteral("No"));
+		if (config.encoderMode == HimotheeEncoderMode::Independent && config.outputWidth > 0 &&
+		    config.outputHeight > 0) {
+			item->setText(15, QStringLiteral("%1x%2").arg(config.outputWidth).arg(config.outputHeight));
+		} else {
+			item->setText(15, QStringLiteral("Match input"));
+		}
 	}
 }
 
@@ -677,6 +684,26 @@ bool HimotheeMultistreamDock::SaveChanges()
 					this, QStringLiteral("Multistream"),
 					QStringLiteral("Destination '%1' needs an even output width and height.")
 						.arg(QString::fromStdString(config.name)));
+				return false;
+			}
+
+			if (config.platform == "Kick" && widthSet &&
+			    (config.outputWidth > 1920 || config.outputHeight > 1080)) {
+				QMessageBox::warning(
+					this, QStringLiteral("Multistream"),
+					QStringLiteral("Kick currently supports a maximum output of 1920x1080. "
+						       "Use 1920x1080 or lower for '%1'.")
+						.arg(QString::fromStdString(config.name)));
+				return false;
+			}
+
+			if (config.platform == "Twitch" && widthSet &&
+			    (config.outputWidth > 1920 || config.outputHeight > 1080)) {
+				QMessageBox::warning(
+					this, QStringLiteral("Multistream"),
+					QStringLiteral("Twitch 1440p/2K uses Twitch Enhanced Broadcasting. "
+						       "Use Twitch as the primary Enhanced Broadcasting output for 2560x1440; "
+						       "ordinary Himothee Twitch secondary RTMP is limited to 1920x1080."));
 				return false;
 			}
 		}
