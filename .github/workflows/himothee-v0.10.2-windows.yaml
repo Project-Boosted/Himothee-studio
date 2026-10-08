@@ -1,4 +1,4 @@
-name: Himothee v0.10.3 - Overlay Designer
+name: Himothee v0.10.3 - Overlay Startup Hotfix
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   windows-x64:
-    name: Windows x64 overlay designer
+    name: Windows x64 overlay startup hotfix
     runs-on: windows-2025-vs2026
     defaults:
       run:
@@ -72,16 +72,30 @@ jobs:
             $engine,
             'HimotheeOverlayManager::HimotheeOverlayManager[\s\S]*?HimotheeOverlayManager::~HimotheeOverlayManager'
           ).Value
-          if ($managerCtor -match 'LoadForCurrentProfile\(\);' -or
-              $managerCtor -match 'GetCurrentProfile\(' -or
-              $managerCtor -match '(?m)^\s*UpdateRuntimeState\(\);\s*
+
+          if ($managerCtor -match 'LoadForCurrentProfile\(\);') {
+            throw 'Overlay manager constructor still loads the profile too early.'
+          }
+
+          if ($managerCtor -match 'GetCurrentProfile\(') {
+            throw 'Overlay manager constructor still reads the current profile too early.'
+          }
+
+          if ($managerCtor -match '(?m)^\s*UpdateRuntimeState\(\);\s*$') {
+            throw 'Overlay manager constructor directly updates runtime state too early.'
+          }
 
           $dockCtor = [regex]::Match(
             $dock,
             'HimotheeOverlayDock::HimotheeOverlayDock[\s\S]*?void HimotheeOverlayDock::BuildUi'
           ).Value
-          if ($dockCtor -match 'ReloadFromManager\(\);' -or $dockCtor -match 'GetCurrentProfile\(') {
-            throw 'Overlay dock constructor still performs profile access too early.'
+
+          if ($dockCtor -match 'ReloadFromManager\(\);') {
+            throw 'Overlay dock constructor still reloads profile state too early.'
+          }
+
+          if ($dockCtor -match 'GetCurrentProfile\(') {
+            throw 'Overlay dock constructor still reads the current profile too early.'
           }
 
           if ($dock -match 'main->GetCurrentProfile\(') {
@@ -117,56 +131,7 @@ jobs:
       - name: Upload Himothee Studio v0.10.3
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Himothee-Studio-v0.10.3-Overlay-Designer-Windows-x64
-          path: build_x64/obs-studio-*-windows-x64.zip
-          if-no-files-found: error
-          retention-days: 14
-) {
-            throw 'Overlay manager constructor still performs profile/runtime access too early.'
-          }
-
-          $dockCtor = [regex]::Match(
-            $dock,
-            'HimotheeOverlayDock::HimotheeOverlayDock[\s\S]*?void HimotheeOverlayDock::BuildUi'
-          ).Value
-          if ($dockCtor -match 'ReloadFromManager\(\);' -or $dockCtor -match 'GetCurrentProfile\(') {
-            throw 'Overlay dock constructor still performs profile access too early.'
-          }
-
-          if ($dock -match 'main->GetCurrentProfile\(') {
-            throw 'Overlay dock must not directly query the current profile.'
-          }
-
-          if ($engine -notmatch 'if \(!main \|\| !main->Config\(\)\)') {
-            throw 'Overlay engine profile readiness guard is missing.'
-          }
-
-      - name: Build Himothee Studio
-        uses: ./.github/actions/build-obs
-        with:
-          target: x64
-          config: RelWithDebInfo
-
-      - name: Validate v0.10.3 identity
-        run: |
-          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
-          $info = $exe.VersionInfo
-          Write-Host "ProductName: $($info.ProductName)"
-          Write-Host "FileVersion: $($info.FileVersion)"
-          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
-          if ($info.FileVersion -ne '0.10.3') { throw 'Wrong Himothee version' }
-
-      - name: Package Windows build
-        uses: ./.github/actions/package-obs
-        with:
-          target: x64
-          config: RelWithDebInfo
-          package: false
-
-      - name: Upload Himothee Studio v0.10.3
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: Himothee-Studio-v0.10.3-Overlay-Designer-Windows-x64
+          name: Himothee-Studio-v0.10.3-Overlay-Startup-Hotfix-Windows-x64
           path: build_x64/obs-studio-*-windows-x64.zip
           if-no-files-found: error
           retention-days: 14
