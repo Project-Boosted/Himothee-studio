@@ -1,0 +1,93 @@
+name: Himothee v0.10.2 - Overlay Designer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/overlay-designer
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 overlay designer
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout overlay-designer branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify Stage 10.3 designer implementation
+        run: |
+          $engine = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp"
+          $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp"
+
+          foreach ($pattern in @(
+            'himothee_dark',
+            'background_opacity',
+            'corner_radius',
+            'HimotheeOverlayPositionId',
+            'HimotheeOverlayAnimationId',
+            '/media/',
+            'media_opacity'
+          )) {
+            if (-not (Select-String -Path $engine -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay designer engine is missing: $pattern"
+            }
+          }
+
+          foreach ($pattern in @(
+            'Himothee Dark',
+            'Minimal',
+            'Neon',
+            'Transparent',
+            'Top Left',
+            'Slide Up',
+            'Media layer',
+            'Choose Overlay Media'
+          )) {
+            if (-not (Select-String -Path $dock -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay designer dock is missing: $pattern"
+            }
+          }
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.10.2 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.10.2') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.10.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.10.2-Overlay-Designer-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
