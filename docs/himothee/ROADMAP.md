@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.4**
+Current development version: **0.10.6**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -147,14 +147,20 @@ Himothee focused on streaming/output and production features.
 - Persistent darts settings/values.
 - HimotheeLink/Autodarts automatic event integration remains a later pass.
 
-### Stage 10.5 — Gaming Widgets — Next
+### Stage 10.5 — Gaming Widgets — Implemented / runtime validation next
 
-- Kills/deaths/assists.
-- Wins/losses.
-- Rounds, attempts, deaths, PBs.
-- Reusable game presets.
+- Combined K/D/A panel.
+- Combined Wins/Losses panel.
+- Round counter.
+- Attempts counter.
+- Deaths counter.
+- Free-text Personal Best display.
+- Combined Session Stats panel with K/D/A and W/L.
+- Manual quick controls for kills, deaths, assists, wins and losses.
+- Persistent gaming values in `overlays.json`.
+- Full compatibility with Designer themes, positions, animations and media.
 
-### Stage 10.6 — Automation
+### Stage 10.6 — Automation — Next
 
 - OBS hotkeys.
 - Stream Deck actions.
