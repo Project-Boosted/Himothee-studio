@@ -2,6 +2,15 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.10.5 — Overlay localhost port-collision hotfix
+
+- Fixed overlay URLs reaching another local service when port 3293 is already occupied.
+- The Himothee overlay server now prefers port 3293 and automatically checks 3294–3313 when necessary.
+- Preview, Copy URL, Create OBS Source, media URLs, and API URLs all use the actual bound port.
+- Added clear logging when the preferred port is unavailable.
+- Existing Browser Sources hard-coded to an old conflicting port must have their URL refreshed once from the Himothee Overlays dock.
+
+
 ## 0.10.4 — Stage 10.4 Darts Widgets
 
 - Added Darts 180 Counter.
