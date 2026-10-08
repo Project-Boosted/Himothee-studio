@@ -25,6 +25,7 @@ namespace {
 
 constexpr const char *kOverlayFileName = "overlays.json";
 constexpr uint16_t kOverlayServerPort = 3293;
+constexpr uint16_t kOverlayServerMaxPort = 3313;
 
 int64_t NowMs()
 {
@@ -933,15 +934,30 @@ bool HimotheeOverlayManager::StartServer()
 	}
 
 	serverError.clear();
-	if (!server->listen(QHostAddress::LocalHost, serverPort)) {
+
+	for (uint16_t candidate = kOverlayServerPort; candidate <= kOverlayServerMaxPort; candidate++) {
+		if (server->listen(QHostAddress::LocalHost, candidate)) {
+			serverPort = candidate;
+			if (candidate != kOverlayServerPort) {
+				blog(LOG_WARNING,
+				     "[Himothee Overlays] Preferred port %u was unavailable; using 127.0.0.1:%u instead.",
+				     kOverlayServerPort, serverPort);
+			} else {
+				blog(LOG_INFO, "[Himothee Overlays] Browser-source server listening on 127.0.0.1:%u.",
+				     serverPort);
+			}
+			return true;
+		}
+
 		serverError = server->errorString().toStdString();
-		blog(LOG_WARNING, "[Himothee Overlays] Could not listen on 127.0.0.1:%u: %s", serverPort,
+		blog(LOG_DEBUG, "[Himothee Overlays] Port 127.0.0.1:%u unavailable: %s", candidate,
 		     serverError.c_str());
-		return false;
 	}
 
-	blog(LOG_INFO, "[Himothee Overlays] Browser-source server listening on 127.0.0.1:%u.", serverPort);
-	return true;
+	serverPort = kOverlayServerPort;
+	serverError = "No free localhost overlay port was found in the 3293-3313 range.";
+	blog(LOG_WARNING, "[Himothee Overlays] %s", serverError.c_str());
+	return false;
 }
 
 bool HimotheeOverlayManager::ServerRunning() const
