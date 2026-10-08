@@ -859,6 +859,12 @@ void HimotheeOverlayDock::UpdateWidgetControls()
 	const bool isTimer = HimotheeOverlayIsTimer(type);
 	const bool isAverage = type == HimotheeOverlayType::DartsAverage;
 	const bool isCheckout = type == HimotheeOverlayType::DartsCheckout;
+	const bool isGamingKDA = type == HimotheeOverlayType::GamingKDA ||
+				 type == HimotheeOverlayType::GamingSessionStats;
+	const bool isGamingWL = type == HimotheeOverlayType::GamingWinsLosses ||
+				 type == HimotheeOverlayType::GamingSessionStats;
+	const bool isGamingPB = type == HimotheeOverlayType::GamingPersonalBest;
+	const bool hasGamingQuickControls = isGamingKDA || isGamingWL;
 
 	textRowWidget->setVisible(isText);
 	counterRowWidget->setVisible(isCounter);
@@ -866,11 +872,24 @@ void HimotheeOverlayDock::UpdateWidgetControls()
 	checkoutScoreRowWidget->setVisible(isCheckout);
 	checkoutRouteRowWidget->setVisible(isCheckout);
 	checkoutDurationRowWidget->setVisible(isCheckout);
+	gamingKillsRowWidget->setVisible(isGamingKDA);
+	gamingDeathsRowWidget->setVisible(isGamingKDA);
+	gamingAssistsRowWidget->setVisible(isGamingKDA);
+	gamingWinsRowWidget->setVisible(isGamingWL);
+	gamingLossesRowWidget->setVisible(isGamingWL);
+	personalBestRowWidget->setVisible(isGamingPB);
 	targetRowWidget->setVisible(isProgress);
 	durationRowWidget->setVisible(isCountdown);
 	counterControlsWidget->setVisible(isCounter);
 	timerControlsWidget->setVisible(isTimer);
 	checkoutControlsWidget->setVisible(isCheckout);
+	gamingControlsWidget->setVisible(hasGamingQuickControls);
+	addKillButton->setEnabled(isGamingKDA);
+	addDeathButton->setEnabled(isGamingKDA);
+	addAssistButton->setEnabled(isGamingKDA);
+	addWinButton->setEnabled(isGamingWL);
+	addLossButton->setEnabled(isGamingWL);
+	resetGamingButton->setEnabled(hasGamingQuickControls);
 
 	const string id = SelectedId();
 	const auto *liveOverlay = manager ? manager->Find(id) : nullptr;
@@ -957,6 +976,13 @@ void HimotheeOverlayDock::AddOverlay()
 		QStringLiteral("Darts Match Wins"),
 		QStringLiteral("Darts Average"),
 		QStringLiteral("Darts Checkout"),
+		QStringLiteral("Gaming K/D/A"),
+		QStringLiteral("Gaming Wins / Losses"),
+		QStringLiteral("Gaming Round"),
+		QStringLiteral("Gaming Attempts"),
+		QStringLiteral("Gaming Deaths"),
+		QStringLiteral("Gaming Personal Best"),
+		QStringLiteral("Gaming Session Stats"),
 	};
 
 	bool ok = false;
@@ -1106,6 +1132,30 @@ void HimotheeOverlayDock::ClearSelectedCheckout()
 	const string id = SelectedId();
 	if (!id.empty() && manager->ClearCheckout(id)) {
 		Refresh();
+	}
+}
+
+void HimotheeOverlayDock::AdjustSelectedGamingStat(const string &stat, int delta)
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+
+	const string id = SelectedId();
+	if (!id.empty() && manager->AdjustGamingStat(id, stat, delta)) {
+		SyncWorkingFromManager();
+	}
+}
+
+void HimotheeOverlayDock::ResetSelectedGamingStats()
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+
+	const string id = SelectedId();
+	if (!id.empty() && manager->ResetGamingStats(id)) {
+		SyncWorkingFromManager();
 	}
 }
 
