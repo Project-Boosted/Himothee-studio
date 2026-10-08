@@ -21,6 +21,8 @@ jobs:
         run: npm install
       - name: Test command planner
         run: npm test
+      - name: Type-check Stream Deck SDK events
+        run: npm run typecheck
       - name: Compile and generate PNG assets
         run: npm run build
       - name: Validate Elgato manifest and assets
@@ -30,6 +32,6 @@ jobs:
       - name: Publish installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HimotheeStudio-StreamDeck-10.6.3
+          name: HimotheeStudio-StreamDeck-10.6.4
           path: integrations/streamdeck/dist/*.streamDeckPlugin
           if-no-files-found: error

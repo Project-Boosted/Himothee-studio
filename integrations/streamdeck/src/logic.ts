@@ -81,5 +81,7 @@ export function visual(kind: Kind, settings: Settings, state: Snapshot, online: 
   case "timer": return {active:!!overlay,
    title:overlay ? `${overlay.name.slice(0,13)}\n${String(overlay.display??"").slice(0,12)}` : "SELECT\nTIMER"};
   case "command": return {active:!!settings.actionId,title:settings.actionId ? settings.actionId.replace(".", "\n").slice(0,23) : "SELECT\nACTION"};
+  case "dial-counter": case "dial-scene": case "dial-timer":
+   return {active:false,title:"DIAL"};
  }
 }

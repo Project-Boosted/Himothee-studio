@@ -291,6 +291,9 @@ QJsonObject HimotheeActionRegistry::StateSnapshot() const
 			item.insert(QStringLiteral("type"), QString::fromUtf8(HimotheeOverlayTypeId(overlay.type)));
 			item.insert(QStringLiteral("visible"), overlay.visible);
 			item.insert(QStringLiteral("display"), manager->RuntimeDisplay(overlay.id));
+			item.insert(QStringLiteral("counter"), HimotheeOverlayIsCounter(overlay.type));
+			item.insert(QStringLiteral("timer"), HimotheeOverlayIsTimer(overlay.type));
+			item.insert(QStringLiteral("running"), overlay.running);
 			overlays.push_back(item);
 		}
 	}

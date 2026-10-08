@@ -4,8 +4,8 @@
   "Name": "Himothee Studio",
   "Category": "Himothee Studio",
   "Author": "HimotheeGaming",
-  "Description": "Control Himothee Studio streams, multistream destinations, scenes, overlays, counters and timers using the localhost Action Registry.",
-  "Version": "0.10.9.0",
+  "Description": "Control Himothee Studio streams, scenes, overlays and counters on Stream Deck buttons and Stream Deck+ dials.",
+  "Version": "0.10.10.0",
   "SDKVersion": 3,
   "CodePath": "bin/plugin.js",
   "Icon": "imgs/plugin",
@@ -180,6 +180,80 @@
         },
         {
           "Image": "imgs/key-on",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.dial-counter",
+      "Name": "Counter Dial",
+      "Tooltip": "Rotate to increase/decrease counters; press to increment; optional long-touch reset.",
+      "Icon": "imgs/action",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Increase / decrease count",
+          "Push": "Increment count",
+          "Touch": "Increment count",
+          "LongTouch": "Reset (if enabled)"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.dial-scene",
+      "Name": "Scene Selector Dial",
+      "Tooltip": "Rotate to preview OBS scenes, press or tap to switch.",
+      "Icon": "imgs/action",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Browse scenes",
+          "Push": "Switch scene",
+          "Touch": "Switch scene"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/key-off",
+          "Title": ""
+        }
+      ]
+    },
+    {
+      "UUID": "com.himothee.studio.dial-timer",
+      "Name": "Timer Dial",
+      "Tooltip": "Rotate right to start and left to pause; press or tap to toggle; optional long-touch reset.",
+      "Icon": "imgs/action",
+      "Controllers": [
+        "Encoder"
+      ],
+      "UserTitleEnabled": false,
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Start / pause timer",
+          "Push": "Start / pause",
+          "Touch": "Start / pause",
+          "LongTouch": "Reset (if enabled)"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/key-off",
           "Title": ""
         }
       ]

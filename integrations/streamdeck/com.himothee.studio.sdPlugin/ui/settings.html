@@ -40,6 +40,15 @@ function select(title,value,options,change){
  el.addEventListener("change",()=>change(el.value));
  box.append(label,el);return box;
 }
+function toggle(title,value,change,description){
+ const box=document.createElement("div"),label=document.createElement("label"),el=document.createElement("input");
+ label.textContent=title;label.style.display="flex";label.style.alignItems="center";label.style.gap="9px";
+ el.type="checkbox";el.style.width="auto";el.checked=value===true;
+ el.addEventListener("change",()=>change(el.checked));
+ label.prepend(el);box.append(label);
+ if(description){const small=document.createElement("small");small.textContent=description;box.append(small);}
+ return box;
+}
 function update(name,value){settings[name]=value;save();render();}
 function paramValue(name,value){settings.params={...(settings.params||{}),[name]:value};save();}
 function render(){
@@ -62,15 +71,39 @@ function render(){
   }
  } else if(kind==="destination"){
   host.append(select("Stream destination",settings.destinationId,destinations.map(x=>({value:x.id,label:x.name+" ("+x.state+")"})),v=>update("destinationId",v)));
- } else if(kind==="scene"){
-  if(scenes.length)host.append(select("Scene",settings.scene,scenes.map(x=>({value:x,label:x})),v=>update("scene",v)));
-  else host.append(field("Scene name",settings.scene,v=>update("scene",v),"text","Enter the name exactly as shown in Himothee Studio."));
- } else if(["counter","timer","overlay"].includes(kind)){
-  const selection=overlays.filter(x=>kind==="overlay" || String(x.type).toLowerCase().includes(kind));
-  host.append(select("Overlay",settings.overlayId,(selection.length?selection:overlays).map(x=>({value:x.id,label:x.name+" ("+x.type+")"})),v=>update("overlayId",v)));
-  if(kind==="counter")host.append(field("Increment amount (1-100)",settings.amount??1,v=>update("amount",v),"number"));
+ } else if(kind==="scene" || kind==="dial-scene"){
+  if(kind==="dial-scene") {
+   const info=document.createElement("small");
+   info.textContent="Rotate the dial to browse scenes without switching live. Press the dial or tap the strip to switch.";
+   host.append(info);
+  } else if(scenes.length)host.append(select("Scene",settings.scene,scenes.map(x=>({value:x,label:x})),v=>update("scene",v)));
+  else host.append(field("Scene name",settings.scene,v=>update("scene",v),"text","Enter the exact Himothee Studio scene name."));
+ } else if(["counter","timer","overlay","dial-counter","dial-timer"].includes(kind)){
+  const isCounter=["counter","dial-counter"].includes(kind),isTimer=["timer","dial-timer"].includes(kind);
+  const options=overlays.filter(x=>kind==="overlay"||(isCounter?x.counter!==false:x.timer!==false));
+  host.append(select("Overlay",settings.overlayId,options.map(x=>({value:x.id,label:x.name+" ("+x.type+")"})),v=>update("overlayId",v)));
+  if(kind==="counter") {
+   host.append(select("Button command",settings.counterMode||"increment",
+    [{value:"increment",label:"Increment"},{value:"decrement",label:"Decrement"},{value:"reset",label:"Reset"}],v=>update("counterMode",v)));
+   if(settings.counterMode!=="reset")host.append(field("Amount (1–100)",settings.amount??1,v=>update("amount",v),"number"));
+  }
   if(kind==="timer")host.append(select("Button command",settings.timerMode||"timer.start",
    [{value:"timer.start",label:"Start"},{value:"timer.pause",label:"Pause"},{value:"timer.reset",label:"Reset"}],v=>update("timerMode",v)));
+  if(kind==="dial-counter") {
+   host.append(select("Adjustment per dial tick",String(settings.dialStep||1),
+    [1,2,5,10].map(n=>({value:String(n),label:String(n)})),v=>update("dialStep",Number(v))));
+   const info=document.createElement("small");
+   info.textContent="Turn right = +, left = −. Press or tap = add one step. Each rotation is applied exactly once (no auto retry).";
+   host.append(info);
+  }
+  if(kind==="dial-timer"){
+   const info=document.createElement("small");
+   info.textContent="Turn right = start; left = pause. Press or tap = start/pause.";
+   host.append(info);
+  }
+  if(kind==="dial-counter"||kind==="dial-timer")
+   host.append(toggle("Allow long-touch reset",settings.allowReset,v=>update("allowReset",v),
+    "Off by default to avoid accidentally clearing a counter or timer."));
  } else {
   const info=document.createElement("small");info.textContent=kind==="stream"?"Press to start/stop primary streaming.":kind==="record"?"Press to start/stop recording.":"Configure this control using Himothee Studio.";
   host.append(info);

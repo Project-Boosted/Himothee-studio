@@ -5,7 +5,7 @@ export type ActionDefinition = {
  id: string; name: string; category: string; description: string;
  parameters: Record<string, {type: string; required: boolean; description: string}>;
 };
-export type Overlay = {id: string; name: string; type: string; visible: boolean; display: unknown};
+export type Overlay = {id: string; name: string; type: string; visible: boolean; display: unknown; counter?: boolean; timer?: boolean; running?: boolean};
 export type Destination = {id: string; name: string; state: string};
 export type Snapshot = {
  ready: boolean; streaming: boolean; recording: boolean; replay_buffer: boolean;
