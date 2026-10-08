@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.2**
+Current development version: **0.10.4**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -134,15 +134,20 @@ Himothee focused on streaming/output and production features.
 - Local media served through the localhost overlay engine.
 - Designer values persisted per overlay.
 
-### Stage 10.4 — Darts Widgets — Next
+### Stage 10.4 — Darts Widgets — Implemented / runtime validation next
 
 - 180 counter.
-- 140+ / 100+ counts.
-- Legs/wins/averages.
-- Checkout notification.
-- HimotheeLink/Autodarts event integration.
+- 140+ counter.
+- 100+ counter.
+- Legs Won counter.
+- Match Wins counter.
+- Two-decimal darts average display.
+- Timed checkout notification with score/route.
+- Manual Trigger/Clear and +1/-1/Reset controls.
+- Persistent darts settings/values.
+- HimotheeLink/Autodarts automatic event integration remains a later pass.
 
-### Stage 10.5 — Gaming Widgets
+### Stage 10.5 — Gaming Widgets — Next
 
 - Kills/deaths/assists.
 - Wins/losses.
