@@ -11,9 +11,17 @@ class OBSBasic;
 class QByteArray;
 class QTcpServer;
 class QTcpSocket;
+class QTimer;
 
 enum class HimotheeOverlayType {
 	Text,
+	Counter,
+	KillCounter,
+	StreakCounter,
+	Progress,
+	Countdown,
+	Stopwatch,
+	StreamUptime,
 };
 
 struct HimotheeOverlayDefinition {
@@ -25,6 +33,13 @@ struct HimotheeOverlayDefinition {
 	uint32_t height = 1080;
 	std::string title = "Himothee Overlay";
 	std::string text = "Ready";
+
+	int64_t value = 0;
+	int64_t target = 100;
+	int64_t durationMs = 300000;
+	int64_t elapsedMs = 0;
+	bool running = false;
+	int64_t startedAtMs = 0;
 };
 
 class HimotheeOverlayManager {
@@ -39,13 +54,23 @@ public:
 	const std::vector<HimotheeOverlayDefinition> &Overlays() const noexcept { return overlays; }
 	bool ReplaceOverlays(const std::vector<HimotheeOverlayDefinition> &updated);
 
-	std::string AddOverlay();
+	std::string AddOverlay(HimotheeOverlayType type = HimotheeOverlayType::Text);
 	bool RemoveOverlay(const std::string &id);
 	bool SetVisible(const std::string &id, bool visible);
 	bool UpdateOverlay(const HimotheeOverlayDefinition &definition);
 
+	bool AdjustValue(const std::string &id, int64_t delta);
+	bool ResetValue(const std::string &id);
+	bool StartTimer(const std::string &id);
+	bool PauseTimer(const std::string &id);
+	bool ResetTimer(const std::string &id);
+
 	const HimotheeOverlayDefinition *Find(const std::string &id) const;
 	HimotheeOverlayDefinition *Find(const std::string &id);
+
+	QString RuntimeDisplay(const std::string &id) const;
+	int64_t CurrentTimerElapsedMs(const std::string &id) const;
+	int64_t StreamUptimeMs() const;
 
 	bool StartServer();
 	bool ServerRunning() const;
@@ -61,13 +86,27 @@ private:
 	std::string loadedProfilePath;
 
 	std::unique_ptr<QTcpServer> server;
+	std::unique_ptr<QTimer> runtimeTimer;
 	uint16_t serverPort = 3293;
 	std::string serverError;
 
+	bool streamWasActive = false;
+	int64_t streamStartedAtMs = 0;
+
 	std::string MakeOverlayId() const;
+	void UpdateRuntimeState();
+	int64_t CurrentElapsedMs(const HimotheeOverlayDefinition &overlay) const;
+	QString RuntimeDisplay(const HimotheeOverlayDefinition &overlay) const;
+
 	void AcceptConnections();
 	void HandleRequest(QTcpSocket *socket, const QByteArray &request);
 	QByteArray BuildOverlayHtml(const HimotheeOverlayDefinition &overlay) const;
 	QByteArray BuildOverlayJson(const HimotheeOverlayDefinition &overlay) const;
 	void WriteResponse(QTcpSocket *socket, int statusCode, const QByteArray &contentType, const QByteArray &body) const;
 };
+
+const char *HimotheeOverlayTypeId(HimotheeOverlayType type);
+QString HimotheeOverlayTypeName(HimotheeOverlayType type);
+HimotheeOverlayType HimotheeOverlayTypeFromId(const char *type);
+bool HimotheeOverlayIsCounter(HimotheeOverlayType type);
+bool HimotheeOverlayIsTimer(HimotheeOverlayType type);
