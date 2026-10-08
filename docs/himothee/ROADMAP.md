@@ -2,7 +2,7 @@
 
 ## Current status
 
-Current development version: **0.10.6**
+Current development version: **0.10.7**
 
 OBS baseline: **32.2.2**, commit ba2f32bdf791005443988a4955e963663e16b1ed.
 
@@ -160,12 +160,36 @@ Himothee focused on streaming/output and production features.
 - Persistent gaming values in `overlays.json`.
 - Full compatibility with Designer themes, positions, animations and media.
 
-### Stage 10.6 — Automation — Next
+### Stage 10.6 — Automation and external control — In progress
 
+#### Stage 10.6.1 — Himothee Action Registry — Implemented / build validation next
+
+- Central stable action IDs.
+- Structured parameters and result/error objects.
+- Action discovery metadata.
+- State snapshot foundation.
+- Streaming, recording, Replay Buffer, scene, and audio actions.
+- Multistream destination actions.
+- Overlay/counter/timer actions.
+- Darts and gaming actions.
+- Startup/profile readiness guard.
+- UI-thread execution contract.
+
+#### Stage 10.6.2 — Stream Deck local bridge — Next
+
+- Localhost-only control connection.
+- Automatic Himothee detection.
+- Action discovery and execution.
+- State snapshot endpoint/event foundation.
+- No manual IP configuration.
+
+#### Later Stage 10.6 work
+
+- Native Stream Deck action plugin.
+- Stream Deck+ dials/touch controls.
+- Live button states.
 - OBS hotkeys.
-- Stream Deck actions.
-- Media triggers.
-- Sounds.
+- Media/sound triggers.
 - Rules/macros.
 
 ### Additional production/release work
