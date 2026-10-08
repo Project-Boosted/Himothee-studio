@@ -1,8 +1,9 @@
 import type {ActionDefinition, Parameters, Snapshot} from "./bridge";
-export type Kind = "command"|"stream"|"record"|"destination"|"scene"|"overlay"|"counter"|"timer";
+export type Kind = "command"|"stream"|"record"|"destination"|"scene"|"overlay"|"counter"|"timer"|"dial-counter"|"dial-scene"|"dial-timer";
 export type Settings = {
- actionId?: string; params?: Record<string, unknown>;
+ actionId?: string; params?: Record<string, string | number | boolean | null>;
  destinationId?: string; scene?: string; overlayId?: string; amount?: number; timerMode?: string;
+ dialStep?: number; allowReset?: boolean; counterMode?: "increment"|"decrement"|"reset";
 };
 export type Command = {id: string; params: Parameters};
 export function configured(kind: Kind, settings: Settings, state: Snapshot): Command | null {
@@ -25,9 +26,12 @@ export function configured(kind: Kind, settings: Settings, state: Snapshot): Com
   }
   case "counter": {
    if (!state.overlays.some(x=>x.id===overlayId)) return null;
+   const mode=settings.counterMode || "increment";
+   if (!["increment","decrement","reset"].includes(mode)) return null;
+   if (mode === "reset") return {id:"counter.reset",params:{overlay_id:overlayId!}};
    const amount = Number(settings.amount ?? 1);
    if (!Number.isInteger(amount) || amount < 1 || amount > 100) return null;
-   return {id:"counter.increment",params:{overlay_id:overlayId!,amount}};
+   return {id:mode==="decrement"?"counter.decrement":"counter.increment",params:{overlay_id:overlayId!,amount}};
   }
   case "timer": {
    if (!state.overlays.some(x=>x.id===overlayId)) return null;
