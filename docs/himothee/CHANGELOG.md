@@ -2,6 +2,20 @@
 
 Underlying OBS baseline: OBS Studio 32.2.2.
 
+## 0.9.6 — Multistream control and resolution audit
+
+- Separated destination Enabled from Auto-start.
+- Enabled destinations are prepared with the primary stream even when Auto-start is off.
+- Only Auto-start destinations go live automatically with the primary.
+- Added Go Live Enabled and End Secondaries controls.
+- Added Go Live Selected and End Selected live controls.
+- Added explicit OBS encoder Input and actual destination Output resolution reporting.
+- Kept Independent destination output width/height configurable per platform.
+- Added Kick 1080p validation and clearer Twitch 1440p/Enhanced Broadcasting guidance.
+- Documented the intended Twitch 2560x1440 primary + Kick 1920x1080 secondary setup.
+- Kept the current architectural limitation that secondaries still require the OBS primary streaming session.
+
+
 ## 0.9.5 — Native chat removal / Botrix custom dock
 
 - Removed the experimental Himothee Unified Chat manager.
