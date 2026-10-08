@@ -761,13 +761,20 @@ void HimotheeOverlayDock::UpdateWidgetControls()
 	const bool isProgress = type == HimotheeOverlayType::Progress;
 	const bool isCountdown = type == HimotheeOverlayType::Countdown;
 	const bool isTimer = HimotheeOverlayIsTimer(type);
+	const bool isAverage = type == HimotheeOverlayType::DartsAverage;
+	const bool isCheckout = type == HimotheeOverlayType::DartsCheckout;
 
 	textRowWidget->setVisible(isText);
 	counterRowWidget->setVisible(isCounter);
+	averageRowWidget->setVisible(isAverage);
+	checkoutScoreRowWidget->setVisible(isCheckout);
+	checkoutRouteRowWidget->setVisible(isCheckout);
+	checkoutDurationRowWidget->setVisible(isCheckout);
 	targetRowWidget->setVisible(isProgress);
 	durationRowWidget->setVisible(isCountdown);
 	counterControlsWidget->setVisible(isCounter);
 	timerControlsWidget->setVisible(isTimer);
+	checkoutControlsWidget->setVisible(isCheckout);
 
 	const string id = SelectedId();
 	const auto *liveOverlay = manager ? manager->Find(id) : nullptr;
@@ -847,6 +854,13 @@ void HimotheeOverlayDock::AddOverlay()
 		QStringLiteral("Countdown"),
 		QStringLiteral("Stopwatch"),
 		QStringLiteral("Stream Uptime"),
+		QStringLiteral("Darts 180 Counter"),
+		QStringLiteral("Darts 140+ Counter"),
+		QStringLiteral("Darts 100+ Counter"),
+		QStringLiteral("Darts Legs Won"),
+		QStringLiteral("Darts Match Wins"),
+		QStringLiteral("Darts Average"),
+		QStringLiteral("Darts Checkout"),
 	};
 
 	bool ok = false;
@@ -962,6 +976,40 @@ void HimotheeOverlayDock::ResetSelectedTimer()
 	const string id = SelectedId();
 	if (!id.empty() && manager->ResetTimer(id)) {
 		SyncWorkingFromManager();
+	}
+}
+
+void HimotheeOverlayDock::TriggerSelectedCheckout()
+{
+	if (!manager || !SaveChanges()) {
+		return;
+	}
+
+	const string id = SelectedId();
+	if (id.empty()) {
+		return;
+	}
+
+	const auto *overlay = manager->Find(id);
+	if (!overlay || overlay->type != HimotheeOverlayType::DartsCheckout) {
+		return;
+	}
+
+	if (manager->TriggerCheckout(id, overlay->checkoutScore, overlay->checkoutRoute,
+				     overlay->notificationDurationMs)) {
+		Refresh();
+	}
+}
+
+void HimotheeOverlayDock::ClearSelectedCheckout()
+{
+	if (!manager) {
+		return;
+	}
+
+	const string id = SelectedId();
+	if (!id.empty() && manager->ClearCheckout(id)) {
+		Refresh();
 	}
 }
 
