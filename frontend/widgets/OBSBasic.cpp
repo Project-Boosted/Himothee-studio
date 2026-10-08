@@ -33,6 +33,7 @@
 #include <docks/HimotheeMultistreamDock.hpp>
 #include <docks/HimotheeOverlayDock.hpp>
 #include <utility/HimotheeActionRegistry.hpp>
+#include <utility/HimotheeControlBridge.hpp>
 #include <dialogs/NameDialog.hpp>
 #include <dialogs/OBSAbout.hpp>
 #include <dialogs/OBSBasicAdvAudio.hpp>
@@ -388,6 +389,7 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 	// Central control surface used by native UI, future Stream Deck bridge,
 	// hotkeys, macros, and other external controllers.
 	himotheeActionRegistry = std::make_unique<HimotheeActionRegistry>(this);
+	himotheeControlBridge = std::make_unique<HimotheeControlBridge>(this);
 
 	copyActionsDynamicProperties();
 
