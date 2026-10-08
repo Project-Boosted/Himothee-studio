@@ -480,6 +480,18 @@ bool HimotheeOverlayManager::Load()
 						 ? obs_data_get_int(item, "notification_duration_ms")
 						 : 3000;
 		overlay.notificationUntilMs = 0;
+		overlay.gamingKills =
+			obs_data_has_user_value(item, "gaming_kills") ? obs_data_get_int(item, "gaming_kills") : 0;
+		overlay.gamingDeaths =
+			obs_data_has_user_value(item, "gaming_deaths") ? obs_data_get_int(item, "gaming_deaths") : 0;
+		overlay.gamingAssists =
+			obs_data_has_user_value(item, "gaming_assists") ? obs_data_get_int(item, "gaming_assists") : 0;
+		overlay.gamingWins =
+			obs_data_has_user_value(item, "gaming_wins") ? obs_data_get_int(item, "gaming_wins") : 0;
+		overlay.gamingLosses =
+			obs_data_has_user_value(item, "gaming_losses") ? obs_data_get_int(item, "gaming_losses") : 0;
+		const char *personalBest = obs_data_get_string(item, "personal_best");
+		if (personalBest && *personalBest) overlay.personalBest = personalBest;
 
 		if (overlay.id.empty()) {
 			overlay.id = "overlay-" + to_string(i + 1);
@@ -509,6 +521,11 @@ bool HimotheeOverlayManager::Load()
 		overlay.decimalValue = max(0.0, overlay.decimalValue);
 		overlay.checkoutScore = clamp<int64_t>(overlay.checkoutScore, 0, 170);
 		overlay.notificationDurationMs = clamp<int64_t>(overlay.notificationDurationMs, 500, 15000);
+		overlay.gamingKills = max<int64_t>(0, overlay.gamingKills);
+		overlay.gamingDeaths = max<int64_t>(0, overlay.gamingDeaths);
+		overlay.gamingAssists = max<int64_t>(0, overlay.gamingAssists);
+		overlay.gamingWins = max<int64_t>(0, overlay.gamingWins);
+		overlay.gamingLosses = max<int64_t>(0, overlay.gamingLosses);
 		if (!HimotheeOverlayIsTimer(overlay.type)) {
 			overlay.running = false;
 			overlay.startedAtMs = 0;
@@ -572,6 +589,12 @@ bool HimotheeOverlayManager::Save() const
 		obs_data_set_int(item, "checkout_score", overlay.checkoutScore);
 		obs_data_set_string(item, "checkout_route", overlay.checkoutRoute.c_str());
 		obs_data_set_int(item, "notification_duration_ms", overlay.notificationDurationMs);
+		obs_data_set_int(item, "gaming_kills", overlay.gamingKills);
+		obs_data_set_int(item, "gaming_deaths", overlay.gamingDeaths);
+		obs_data_set_int(item, "gaming_assists", overlay.gamingAssists);
+		obs_data_set_int(item, "gaming_wins", overlay.gamingWins);
+		obs_data_set_int(item, "gaming_losses", overlay.gamingLosses);
+		obs_data_set_string(item, "personal_best", overlay.personalBest.c_str());
 		obs_data_array_push_back(array, item);
 	}
 
