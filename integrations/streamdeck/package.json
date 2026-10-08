@@ -7,7 +7,7 @@
     "build": "node scripts/icons.mjs && esbuild src/plugin.ts --bundle --platform=node --format=cjs --target=node24 --outfile=com.himothee.studio.sdPlugin/bin/plugin.js",
     "test": "node --test tests/*.test.mjs",
     "check": "npm run test && npm run typecheck && npm run build && streamdeck validate com.himothee.studio.sdPlugin --no-update-check",
-    "pack": "npm run build && streamdeck pack com.himothee.studio.sdPlugin --output dist --no-update-check --force",
+    "pack": "npm run build && streamdeck pack com.himothee.studio.sdPlugin --output dist --no-update-check --force && python scripts/repack_installer.py && python scripts/repack_installer.py --verify",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

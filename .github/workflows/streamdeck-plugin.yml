@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install SDK and build tools
         run: npm install
       - name: Test command planner
@@ -29,9 +32,13 @@ jobs:
         run: npx streamdeck validate com.himothee.studio.sdPlugin --no-update-check
       - name: Build Stream Deck installer
         run: npx streamdeck pack com.himothee.studio.sdPlugin --output dist --no-update-check
+      - name: Repair and verify ZIP32 installer compatibility
+        run: |
+          python scripts/repack_installer.py
+          python scripts/repack_installer.py --verify
       - name: Publish installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HimotheeStudio-StreamDeck-10.6.4
+          name: HimotheeStudio-StreamDeck-10.6.4-FIXED
           path: integrations/streamdeck/dist/*.streamDeckPlugin
           if-no-files-found: error

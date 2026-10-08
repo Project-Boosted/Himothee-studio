@@ -5,7 +5,7 @@
   "Category": "Himothee Studio",
   "Author": "HimotheeGaming",
   "Description": "Control Himothee Studio streams, scenes, overlays and counters on Stream Deck buttons and Stream Deck+ dials.",
-  "Version": "0.10.10.0",
+  "Version": "0.10.10.1",
   "SDKVersion": 3,
   "CodePath": "bin/plugin.js",
   "Icon": "imgs/plugin",
