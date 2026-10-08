@@ -22,6 +22,13 @@ enum class HimotheeOverlayType {
 	Countdown,
 	Stopwatch,
 	StreamUptime,
+	Darts180,
+	Darts140Plus,
+	Darts100Plus,
+	DartsLegs,
+	DartsWins,
+	DartsAverage,
+	DartsCheckout,
 };
 
 enum class HimotheeOverlayPosition {
@@ -74,6 +81,12 @@ struct HimotheeOverlayDefinition {
 	std::string mediaPath;
 	uint32_t mediaOpacity = 100;
 	bool mediaLoop = true;
+
+	double decimalValue = 0.0;
+	int64_t checkoutScore = 0;
+	std::string checkoutRoute;
+	int64_t notificationDurationMs = 3000;
+	int64_t notificationUntilMs = 0;
 };
 
 class HimotheeOverlayManager {
@@ -99,6 +112,11 @@ public:
 	bool StartTimer(const std::string &id);
 	bool PauseTimer(const std::string &id);
 	bool ResetTimer(const std::string &id);
+
+	bool SetDecimalValue(const std::string &id, double value);
+	bool TriggerCheckout(const std::string &id, int64_t score, const std::string &route,
+			    int64_t durationMs = 3000);
+	bool ClearCheckout(const std::string &id);
 
 	const HimotheeOverlayDefinition *Find(const std::string &id) const;
 	HimotheeOverlayDefinition *Find(const std::string &id);
@@ -146,6 +164,7 @@ QString HimotheeOverlayTypeName(HimotheeOverlayType type);
 HimotheeOverlayType HimotheeOverlayTypeFromId(const char *type);
 bool HimotheeOverlayIsCounter(HimotheeOverlayType type);
 bool HimotheeOverlayIsTimer(HimotheeOverlayType type);
+bool HimotheeOverlayIsDarts(HimotheeOverlayType type);
 
 const char *HimotheeOverlayPositionId(HimotheeOverlayPosition position);
 QString HimotheeOverlayPositionName(HimotheeOverlayPosition position);
