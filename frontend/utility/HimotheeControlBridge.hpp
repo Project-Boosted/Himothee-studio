@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <QString>
+#include <QtGlobal>
 
 class OBSBasic;
 class QTcpServer;
