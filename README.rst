@@ -14,7 +14,7 @@ Project Status
 
 Early development / pre-release.
 
-Current Himothee Studio development version: 0.10.6
+Current Himothee Studio development version: 0.10.7
 
 Underlying OBS baseline: OBS Studio 32.2.2
 (commit ba2f32bdf791005443988a4955e963663e16b1ed).
@@ -52,6 +52,7 @@ Current Features
 * Optional image, GIF, video, or HTTPS media layer per overlay.
 * Darts 180, 140+, 100+, Legs Won, Match Wins, Average, and Checkout widgets.
 * Gaming K/D/A, Wins/Losses, Round, Attempts, Deaths, Personal Best, and Session Stats widgets.
+* Central Himothee Action Registry for streaming, recording, replay, scenes, audio, multistream, overlays, darts, and gaming controls.
 
 Chat
 ----
@@ -85,9 +86,10 @@ v0.10.3 - Stage 10 overlay startup lifecycle hotfix.
 v0.10.4 - Stage 10.4 Darts Widgets.
 v0.10.5 - Overlay localhost port-collision hotfix.
 v0.10.6 - Stage 10.5 Gaming Widgets.
+v0.10.7 - Stage 10.6.1 Himothee Action Registry.
 
-Next overlay stages add hotkeys, Stream Deck actions, automation, and live
-HimotheeLink/Autodarts event integration.
+Next: Stage 10.6.2 local Stream Deck control bridge, followed by Stream Deck
+actions, live button state, hotkeys/macros, and automation.
 
 Security
 --------
