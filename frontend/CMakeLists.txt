@@ -65,10 +65,10 @@ include(cmake/feature-whatsnew.cmake)
 include(cmake/feature-idian-playground.cmake)
 
 set(HIMOTHEE_PRODUCT_NAME "Himothee Studio")
-set(HIMOTHEE_VERSION "0.10.7")
+set(HIMOTHEE_VERSION "0.10.8")
 set(HIMOTHEE_VERSION_MAJOR 0)
 set(HIMOTHEE_VERSION_MINOR 10)
-set(HIMOTHEE_VERSION_PATCH 7)
+set(HIMOTHEE_VERSION_PATCH 8)
 
 configure_file(cmake/templates/ui-config.h.in ui-config.h)
 
