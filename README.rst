@@ -2,95 +2,133 @@ Himothee Studio
 ===============
 
 Himothee Studio is a streaming and production application based on
-`OBS Studio <https://github.com/obsproject/obs-studio>`_.
+OBS Studio: https://github.com/obsproject/obs-studio
 
-The project starts from **OBS Studio 32.2.2** and is focused on adding
-native multi-destination streaming while retaining the mature capture,
-scene, source, audio, recording, replay-buffer, encoder, and plugin
-capabilities provided by OBS Studio.
+The project starts from OBS Studio 32.2.2 and adds native
+multi-destination streaming, unified multiplatform chat, and production
+tooling while retaining OBS capture, scenes, sources, audio, recording,
+Replay Buffer, encoders, and plugin support.
 
 Project Status
 --------------
 
-**Early development / pre-release.**
+Early development / pre-release.
 
-The current development baseline is OBS Studio 32.2.2
-(commit ``ba2f32bdf791005443988a4955e963663e16b1ed``).
+Current Himothee Studio development version: 0.9.4
 
-Development takes place on the ``himothee-dev`` branch. The ``master``
-branch is intentionally kept close to upstream OBS so upstream changes
-can be reviewed without mixing them directly into product development.
+Underlying OBS baseline: OBS Studio 32.2.2
+(commit ba2f32bdf791005443988a4955e963663e16b1ed).
 
-Primary Goals
--------------
+The integration branch is himothee-dev. Current feature work is on
+feature/twitch-chat. The master branch is kept close to upstream OBS.
 
-* Native multistreaming to Twitch, YouTube, Kick, and custom RTMP targets.
-* Shared-encoder multistreaming for low GPU overhead.
-* Independent per-destination encoding as an advanced mode.
-* Per-destination bitrate, server, stream key, reconnect, and status handling.
-* Per-destination audio routing in a later development stage.
-* Integrated production tools such as media triggers, macros, counters,
-  timers, alerts, and browser-based overlays.
-* A streamlined interface that remains familiar to existing OBS users.
+Current Features
+----------------
 
-Planned Development
+* Native Multistream Manager.
+* Twitch, YouTube, Kick, and Custom RTMP destination configuration.
+* Shared-encoder streaming.
+* Independent per-destination video/audio encoders.
+* Per-destination bitrate and output resolution.
+* Per-destination OBS Track 1-6 audio routing.
+* Reconnect policy, bitrate, dropped frames, uptime, congestion, and errors.
+* Platform-safe H.264 handling for ordinary Twitch and Kick RTMP outputs.
+* Protection against accidentally duplicating the primary stream key.
+* Native Himothee Chat dock.
+* All / Twitch / YouTube / Kick chat filters.
+* Common chat message/provider architecture.
+* Twitch live-chat receive through EventSub WebSockets.
+* Twitch Auto - My Channel mode and optional Custom Channel mode.
+
+Recent Development
+------------------
+
+v0.9.0
+  Added the native Unified Chat dock and common chat architecture.
+
+v0.9.1
+  Fixed an early-startup Multistream config-access crash.
+
+v0.9.2
+  Added visible Multistream diagnostics and better shared/multitrack errors.
+
+v0.9.3
+  Added Twitch/Kick RTMP compatibility hardening, including platform-safe
+  H.264 handling and Kick-safe output limits.
+
+v0.9.4
+  Added Twitch account detection, Auto - My Channel, OAuth validation,
+  EventSub WebSocket chat receive, reconnect handling, and message mapping.
+
+The v0.9.4 Windows CI build completed successfully.
+
+Development Roadmap
 -------------------
 
-``v0.1`` - Establish a clean OBS Studio 32.2.2 baseline.
+v0.1 - OBS Studio 32.2.2 baseline.
 
-``v0.2`` - Himothee Studio application identity and branding.
+v0.2 - Himothee Studio identity and config separation.
 
-``v0.3`` - Multi-output streaming core.
+v0.3 - Native multi-output streaming core.
 
-``v0.4`` - Multistream Manager user interface.
+v0.4 - Multistream Manager UI.
 
-``v0.5`` - Shared-encoder multistreaming.
+v0.5 - Shared-encoder production mode.
 
-``v0.6`` - Independent per-destination encoders.
+v0.6 - Independent per-destination encoders.
 
-``v0.7`` - Destination health, reconnect, error reporting, and statistics.
+v0.7 - Destination resilience and telemetry.
 
-``v0.8`` - Per-destination audio routing.
+v0.8 - Per-destination audio routing.
 
-Further stages will integrate alerts, media triggers, macros, counters,
-timers, browser overlays, and external control.
+Stage 9.1 - Unified Chat dock and common message model.
+
+Stage 9.2 - Twitch account and live chat receive.
+
+Next: YouTube live chat, Kick live chat, one/all-platform sending,
+moderation, platform events, and Chat-to-Alerts/Triggers integration.
 
 Documentation
 -------------
 
-Project-specific documentation lives in ``docs/himothee/``:
+Project documentation is in docs/himothee/:
 
-* ``DEVELOPMENT.md`` - development workflow and branch strategy.
-* ``ROADMAP.md`` - staged implementation plan.
-* ``MULTISTREAM_ARCHITECTURE.md`` - multi-output architecture.
-* ``UPSTREAM.md`` - how this fork tracks OBS Studio.
+* DEVELOPMENT.md - workflow and branch strategy.
+* ROADMAP.md - implementation plan and current progress.
+* CHANGELOG.md - Himothee development-version changes.
+* MULTISTREAM_ARCHITECTURE.md - multi-output architecture.
+* STAGE8_AUDIO_ROUTING.md - per-destination audio routing.
+* STAGE9_1_UNIFIED_CHAT.md - Unified Chat foundation.
+* STAGE9_2_TWITCH_CHAT.md - Twitch live-chat integration.
+* UPSTREAM.md - OBS upstream tracking.
 
 Building
 --------
 
-Until the Himothee-specific build pipeline is introduced, the project
-uses the OBS Studio build system inherited from the 32.2.2 baseline.
+Himothee-specific Windows CI workflows build and package each stage
+using the OBS Studio 32.2.2 build system.
 
-See ``docs/himothee/DEVELOPMENT.md`` before making changes.
+Current Stage 9.2 Windows CI:
+https://github.com/Project-Boosted/Himothee-studio/actions/runs/37699863869
+
+Security
+--------
+
+Never commit stream keys, OAuth access/refresh tokens, passwords,
+certificates, or other secrets.
+
+Current experimental Windows artifacts are unsigned and may trigger
+browser or Windows reputation warnings until a signing pipeline exists.
 
 Upstream OBS Studio
 -------------------
 
-Himothee Studio is a derivative of OBS Studio. The original OBS Studio
-project is available at:
-
-https://github.com/obsproject/obs-studio
-
-OBS Studio is developed by the OBS Project and its contributors.
-Himothee Studio is an independent fork and is not an official OBS
-Project distribution.
+Himothee Studio is a derivative of OBS Studio. OBS Studio is developed
+by the OBS Project and its contributors. Himothee Studio is independent
+and is not an official OBS Project distribution.
 
 License
 -------
 
 This repository retains the OBS Studio GNU General Public License
-version 2 or later licensing. See the repository's ``COPYING`` file and
-applicable source-file notices for details.
-
-When distributing Himothee Studio builds, the corresponding GPL source
-and required notices must remain available.
+version 2 or later licensing. See COPYING and applicable source notices.
