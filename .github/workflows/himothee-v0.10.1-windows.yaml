@@ -1,0 +1,93 @@
+name: Himothee v0.10.1 - Timers and Counters
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/overlay-widgets
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    name: Windows x64 overlay widgets
+    runs-on: windows-2025-vs2026
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout overlay-widgets branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Restore OBS 32.2.2 version tag
+        run: |
+          git fetch https://github.com/obsproject/obs-studio.git refs/tags/32.2.2:refs/tags/32.2.2 --force
+
+      - name: Verify Stage 10.2 widget implementation
+        run: |
+          $engine = "$Env:GITHUB_WORKSPACE\frontend\overlays\HimotheeOverlayEngine.cpp"
+          $dock = "$Env:GITHUB_WORKSPACE\frontend\docks\HimotheeOverlayDock.cpp"
+
+          foreach ($pattern in @(
+            'kill_counter',
+            'streak_counter',
+            'stream_uptime',
+            'StartTimer',
+            'PauseTimer',
+            'AdjustValue',
+            'progressBar'
+          )) {
+            if (-not (Select-String -Path $engine -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay widget engine is missing: $pattern"
+            }
+          }
+
+          foreach ($pattern in @(
+            'Kill Counter',
+            'Streak Counter',
+            'Challenge Progress',
+            'Countdown',
+            'Stopwatch',
+            'Stream Uptime',
+            '+1',
+            '-1'
+          )) {
+            if (-not (Select-String -Path $dock -Pattern $pattern -SimpleMatch -Quiet)) {
+              throw "Overlay widget dock is missing: $pattern"
+            }
+          }
+
+      - name: Build Himothee Studio
+        uses: ./.github/actions/build-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+
+      - name: Validate v0.10.1 identity
+        run: |
+          $exe = Get-Item "$Env:GITHUB_WORKSPACE\build_x64\rundir\RelWithDebInfo\bin\64bit\obs64.exe"
+          $info = $exe.VersionInfo
+          Write-Host "ProductName: $($info.ProductName)"
+          Write-Host "FileVersion: $($info.FileVersion)"
+          if ($info.ProductName -ne 'Himothee Studio') { throw 'Wrong ProductName' }
+          if ($info.FileVersion -ne '0.10.1') { throw 'Wrong Himothee version' }
+
+      - name: Package Windows build
+        uses: ./.github/actions/package-obs
+        with:
+          target: x64
+          config: RelWithDebInfo
+          package: false
+
+      - name: Upload Himothee Studio v0.10.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Himothee-Studio-v0.10.1-Timers-Counters-Windows-x64
+          path: build_x64/obs-studio-*-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
