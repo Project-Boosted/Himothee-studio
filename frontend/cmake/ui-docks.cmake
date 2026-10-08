@@ -5,4 +5,8 @@ target_sources(
     docks/OBSDock.hpp
     docks/HimotheeMultistreamDock.cpp
     docks/HimotheeMultistreamDock.hpp
+    docks/HimotheeOverlayDock.cpp
+    docks/HimotheeOverlayDock.hpp
+    overlays/HimotheeOverlayEngine.cpp
+    overlays/HimotheeOverlayEngine.hpp
 )
