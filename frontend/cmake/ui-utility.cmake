@@ -19,6 +19,8 @@ target_sources(
     utility/GoLiveAPI_Network.hpp
     utility/GoLiveAPI_PostData.cpp
     utility/GoLiveAPI_PostData.hpp
+    utility/HimotheeActionRegistry.cpp
+    utility/HimotheeActionRegistry.hpp
     utility/HimotheeMultistream.cpp
     utility/HimotheeMultistream.hpp
     utility/MissingFilesModel.cpp
